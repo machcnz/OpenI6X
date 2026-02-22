@@ -1,3 +1,21 @@
+## Fork note: Openi6x - Companion app - Flysky i6X support
+
+Default branch `companion-i6x-support` adds Flysky i6X support to the Companion app.
+
+Status
+- Tested on real Flysky i6X hardware
+- EEPROM read/write verified
+- Model load/save verified
+
+### Build (Companion)
+
+mkdir build && cd build
+
+cmake .. -DPCB=I6X -DHELI=NO -DGVARS=YES -DPCBI6X_INAV=NO -DPCBI6X_ELRS=YES -DDFPLAYER=YES -DUSB_MSD=YES -DUSB_SERIAL=YES -DSBUS_TRAINER=YES -DTRANSLATIONS=EN -DDEBUG=NO -DCMAKE_BUILD_TYPE=Release
+
+make -j$(nproc)
+
+
 [![Release](https://img.shields.io/github/v/release/OpenI6X/opentx?include_prereleases)](https://github.com/OpenI6X/opentx/releases/latest)
 [![GitHub all releases](https://img.shields.io/github/downloads/OpenI6X/opentx/total)](https://github.com/OpenI6X/opentx/releases)
 [![GitHub license](https://img.shields.io/github/license/OpenI6X/opentx)](https://github.com/openi6x/opentx/blob/master/LICENSE)
