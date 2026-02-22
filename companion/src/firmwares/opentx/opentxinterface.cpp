@@ -31,6 +31,8 @@
 
 #include "storage.h"  // does this need to be last include?
 
+#include "firmwares/openi6x/openi6xinterface.h" // for OpenI6XFirmware::MAXFILES
+
 #define FILE_TYP_GENERAL 1
 #define FILE_TYP_MODEL   2
 
@@ -86,6 +88,8 @@ const char * OpenTxEepromInterface::getName()
       return "OpenTX for FrSky Horus";
     case BOARD_X10:
       return "OpenTX for FrSky X10";
+    case BOARD_I6X:
+      return "OpenTX for FlySky i6X";
     default:
       return "OpenTX for an unknown board";
   }
@@ -96,7 +100,9 @@ bool OpenTxEepromInterface::loadRadioSettingsFromRLE(GeneralSettings & settings,
   QByteArray data(sizeof(settings), 0); // GeneralSettings should be always bigger than the EEPROM struct
   OpenTxGeneralData open9xSettings(settings, board, version);
   efile->openRd(FILE_GENERAL);
-  int size = rleFile->readRlc2((uint8_t *)data.data(), data.size());
+  // i6X uses AVR-style RLC1 encoding
+  int size = (board == BOARD_I6X) ? rleFile->readRlc1((uint8_t *)data.data(), data.size())
+                                   : rleFile->readRlc2((uint8_t *)data.data(), data.size());
   if (size) {
     open9xSettings.Import(data);
     return checkVariant(settings.version, settings.variant);
@@ -111,7 +117,9 @@ bool OpenTxEepromInterface::loadModelFromRLE(ModelData & model, RleFile * rleFil
 {
   QByteArray data(sizeof(model), 0);  // ModelData should be always bigger than the EEPROM struct
   rleFile->openRd(FILE_MODEL(index));
-  int size = rleFile->readRlc2((uint8_t *)data.data(), data.size());
+  // i6X uses AVR-style RLC1 encoding
+  int size = (board == BOARD_I6X) ? rleFile->readRlc1((uint8_t *)data.data(), data.size())
+                                   : rleFile->readRlc2((uint8_t *)data.data(), data.size());
   if (size) {
     if (loadFromByteArray<ModelData, OpenTxModelData>(model, data, version, variant)) {
       model.used = true;
@@ -216,7 +224,15 @@ unsigned long OpenTxEepromInterface::load(RadioData &radioData, const uint8_t * 
   efile->openRd(FILE_GENERAL);
 
   uint8_t version;
-  if (efile->readRlc2(&version, 1) != 1) {
+  // i6X firmware uses AVR-style RLC1 encoding, not RLC2
+  if (board == BOARD_I6X) {
+    if (efile->readRlc1(&version, 1) != 1) {
+      dbg << " no";
+      errors.set(UNKNOWN_ERROR);
+      return errors.to_ulong();
+    }
+  }
+  else if (efile->readRlc2(&version, 1) != 1) {
     dbg << " no";
     errors.set(UNKNOWN_ERROR);
     return errors.to_ulong();
@@ -270,6 +286,8 @@ uint8_t OpenTxEepromInterface::getLastDataVersion(Board::Type board)
     case BOARD_MEGA2560:
     case BOARD_M128:
       return 217;
+    case BOARD_I6X:
+      return 223;
     default:
       return 218;
   }
@@ -325,7 +343,10 @@ int OpenTxEepromInterface::save(uint8_t * eeprom, const RadioData & radioData, u
   // generator.Dump();
   QByteArray data;
   generator.Export(data);
-  int sz = efile->writeRlc2(FILE_GENERAL, FILE_TYP_GENERAL, (const uint8_t *)data.constData(), data.size());
+  // i6X uses AVR-style RLC1 encoding
+  int sz = (board == BOARD_I6X)
+    ? efile->writeRlc1(FILE_GENERAL, FILE_TYP_GENERAL, (const uint8_t *)data.constData(), data.size())
+    : efile->writeRlc2(FILE_GENERAL, FILE_TYP_GENERAL, (const uint8_t *)data.constData(), data.size());
   if (sz == 0 || generator.errors().count() > 0) {
     showErrors(tr("Cannot write radio settings"), generator.errors());
     return 0;
@@ -337,7 +358,10 @@ int OpenTxEepromInterface::save(uint8_t * eeprom, const RadioData & radioData, u
       // generator.Dump();
       QByteArray data;
       generator.Export(data);
-      int sz = efile->writeRlc2(FILE_MODEL(i), FILE_TYP_MODEL, (const uint8_t *)data.constData(), data.size());
+      // i6X uses AVR-style RLC1 encoding
+      int sz = (board == BOARD_I6X)
+        ? efile->writeRlc1(FILE_MODEL(i), FILE_TYP_MODEL, (const uint8_t *)data.constData(), data.size())
+        : efile->writeRlc2(FILE_MODEL(i), FILE_TYP_MODEL, (const uint8_t *)data.constData(), data.size());
       if (sz == 0 || generator.errors().count() > 0) {
         showErrors(tr("Cannot write model %1").arg(radioData.models[i].name), generator.errors());
         return 0;
@@ -413,6 +437,8 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case Models:
       if (IS_HORUS(board))
         return 0;
+      else if (board == BOARD_I6X)
+        return 20;   // i6X MAXFILES=22, MAX_MODELS=20
       else if (IS_ARM(board))
         return 60;
       else if (board == BOARD_M128)
@@ -492,7 +518,9 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case PermTimers:
       return (IS_2560(board) || IS_ARM(board));
     case CustomFunctions:
-      if (IS_ARM(board))
+      if (board == BOARD_I6X)
+        return 18;
+      else if (IS_ARM(board))
         return 64;
       else if (IS_2560(board) || board == BOARD_M128)
         return 24;
@@ -629,6 +657,9 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case CSFunc:
       return 18;
     case HasSDLogs:
+      // FlySky i6X target is built with SDCARD=NO
+      if (board == BOARD_I6X)
+        return 0;
       return ((IS_2560(board) || IS_ARM(board)) ? true : false);
     case LcdWidth:
       if (IS_HORUS(board))
@@ -660,6 +691,10 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case HasTopLcd:
       return IS_TARANIS_X9E(board) ? 1 : 0;
     case GlobalFunctions:
+      // OpenI6X (FlySky i6X) uses the same limit as other AVR-era builds for global functions.
+      // The forked radio source defines g_eeGeneral.customFn[MAX_SPECIAL_FUNCTIONS] (18).
+      if (board == BOARD_I6X)
+        return 18;
       return IS_ARM(board) ? 64 : 0;
     case VirtualInputs:
       return IS_ARM(board) ? 32 : 0;
@@ -670,6 +705,9 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case RtcTime:
       return IS_ARM(board) || IS_2560(board) ? 1 : 0;
     case LuaScripts:
+      // FlySky i6X target is built with LUA=NO
+      if (board == BOARD_I6X)
+        return 0;
       return IS_HORUS_OR_TARANIS(board) && id.contains("lua") ? 7 : 0;
     case LuaInputsPerScript:
       return IS_HORUS_OR_TARANIS(board) ? 10 : 0;
@@ -887,6 +925,13 @@ EepromLoadErrors OpenTxEepromInterface::checkVersion(unsigned int version)
       }
     case 218:
       break;
+    case 219:
+    case 220:
+    case 221:
+    case 222:
+    case 223:
+      // FlySky i6X (OpenI6X) uses EEPROM_VER 223
+      break;
     default:
       return NOT_OPENTX;
   }
@@ -1064,7 +1109,7 @@ QString OpenTxFirmware::getStampUrl()
 // Firmware registrations
 // NOTE: "recognized" build options are defined in /radio/util/fwoptions.py
 
-void registerOpenTxFirmware(OpenTxFirmware * firmware, bool deprecated = false)
+void registerOpenTxFirmware(OpenTxFirmware * firmware, bool deprecated)
 {
   OpenTxEepromInterface * eepromInterface = new OpenTxEepromInterface(firmware);
   firmware->setEEpromInterface(eepromInterface);
@@ -1137,6 +1182,7 @@ void addOpenTxArm9xOptions(OpenTxFirmware * firmware, bool dblkeys = true)
   addOpenTxRfOptions(firmware, true);
 }
 
+
 void registerOpenTxFirmwares()
 {
   OpenTxFirmware * firmware;
@@ -1198,6 +1244,8 @@ void registerOpenTxFirmwares()
   firmware = new OpenTxFirmware("opentx-sky9x", Firmware::tr("9X with Sky9x board"), BOARD_SKY9X);
   addOpenTxArm9xOptions(firmware);
   registerOpenTxFirmware(firmware);
+
+  // FlySky i6X (OpenI6X) is registered by the openi6x firmware module
 
   // These are kept only for import purposes, marked as deprecated to hide from UI.
   registerOpenTxFirmware(new OpenTxFirmware("opentx-9xr",      Firmware::tr("Turnigy 9XR"),                       BOARD_STOCK),    true);

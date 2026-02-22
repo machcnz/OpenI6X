@@ -133,6 +133,10 @@ class OpenTxFirmware: public Firmware
 void registerOpenTxFirmwares();
 void unregisterOpenTxFirmwares();
 
+// Helper used by modular firmware registration units (e.g. openi6x).
+// Default argument must be declared only here (not in the .cpp definition).
+void registerOpenTxFirmware(OpenTxFirmware * firmware, bool deprecated = false);
+
 extern QList<OpenTxEepromInterface *> opentxEEpromInterfaces;
 
 OpenTxEepromInterface * loadModelFromByteArray(ModelData & model, const QByteArray & data);

@@ -31,6 +31,7 @@
 #define EESIZE_TARANIS                 (32*1024)
 #define EESIZE_SKY9X                   (128*4096)
 #define EESIZE_9XRPRO                  (128*4096)
+#define EESIZE_I6X                     (16*1024)   // Obtained from radio/src/targets/flysky/board.h EEPROM_SIZE
 #define EESIZE_MAX                     EESIZE_9XRPRO
 
 // getFlashSize() (and these macros) is only used by radiointerface::getDfuArgs (perhaps can find a better way?)
@@ -40,6 +41,7 @@
 #define FSIZE_TARANIS                  (512*1024)
 #define FSIZE_SKY9X                    (256*1024)
 #define FSIZE_9XRPRO                   (512*1024)
+#define FSIZE_I6X                      (128*1024)  // Obtained from radio/src/targets/flysky/board.h FLASHSIZE
 #define FSIZE_HORUS                    (2048*1024)
 #define FSIZE_MAX                      FSIZE_HORUS
 
@@ -56,6 +58,8 @@ void Boards::setBoardType(const Type & board)
 uint32_t Boards::getFourCC(Type board)
 {
   switch (board) {
+    case BOARD_I6X:
+      return 0x4178746F;
     case BOARD_X12S:
       return 0x3478746F;
     case BOARD_X10:
@@ -84,6 +88,8 @@ uint32_t Boards::getFourCC(Type board)
 const int Boards::getEEpromSize(Board::Type board)
 {
   switch (board) {
+    case BOARD_I6X:
+    return EESIZE_I6X;     // 16*1024
     case BOARD_STOCK:
       return EESIZE_STOCK;
     case BOARD_M128:
@@ -112,6 +118,8 @@ const int Boards::getEEpromSize(Board::Type board)
 const int Boards::getFlashSize(Type board)
 {
   switch (board) {
+    case BOARD_I6X:
+      return FSIZE_I6X;
     case BOARD_STOCK:
       return FSIZE_STOCK;
     case BOARD_M128:
@@ -144,6 +152,19 @@ const SwitchInfo Boards::getSwitchInfo(Board::Type board, int index)
 {
   if (index < 0)
     return {SWITCH_NOT_AVAILABLE, CPN_STR_UNKNOWN_ITEM};
+  
+    if (board == BOARD_I6X) { // Derived from firwmare keys_driver.cpp (ADC 3-pos for A-D; GPIO 2-pos for E-F).
+    const Board::SwitchInfo switches[] = {
+      {SWITCH_3POS, "SA"},
+      {SWITCH_3POS, "SB"},
+      {SWITCH_3POS, "SC"},
+      {SWITCH_3POS, "SD"},
+      {SWITCH_2POS, "SE"},
+      {SWITCH_2POS, "SF"},
+    };
+    if (index < DIM(switches))
+      return switches[index];
+  }
 
   if (IS_TARANIS_XLITE(board)) {
     const Board::SwitchInfo switches[] = {
@@ -210,6 +231,61 @@ const SwitchInfo Boards::getSwitchInfo(Board::Type board, int index)
 
 const int Boards::getCapability(Board::Type board, Board::Capability capability)
 {
+  // FlySky i6X (OpenI6X): Obtained from radio/src/targets/flysky/board.h + keys_driver.cpp
+  if (board == BOARD_I6X) {
+    switch (capability) {
+      case Sticks:
+        return 4;
+
+      case Pots:
+        return 2;  // POT1, POT2 in radio/src/targets/flysky/board.h (Analogs enum)
+
+      case FactoryInstalledPots:
+        return 2;
+
+      case Sliders:
+        return 0;
+
+      case MouseAnalogs:
+        return 0;
+
+      case MaxAnalogs:
+        return getCapability(board, Sticks) +
+               getCapability(board, Pots) +
+               getCapability(board, Sliders) +
+               getCapability(board, MouseAnalogs);
+
+      case MultiposPots:
+        return 0;
+
+      case MultiposPotsPositions:
+        return 0;
+
+      case Switches:
+        return 6;  // NUM_SWITCHES in radio/src/targets/flysky/board.h
+
+      case FactoryInstalledSwitches:
+        return 6;
+
+      case SwitchPositions:
+        // Companion models "switch sources" as 3 positions per switch.
+        // For 2-pos switches (SE/SF), the middle position gets disabled by switch config logic.
+        return 6 * 3;
+
+      case NumTrims:
+        return 4;
+
+      case NumTrimSwitches:
+        return getCapability(board, NumTrims) * 2;
+    }
+  }
+/*
+ * Why SwitchPositions = 6*3 instead of 16?
+ * Because Companion switch source lists are built in a “3 slots per switch” shape,
+ * and then mid positions are disabled when the switch is configured as 2-pos.
+ * That matches GeneralSettings::switchPositionAllowedTaranis() logic.
+ */
+
   switch (capability) {
     case Sticks:
       return 4;
@@ -320,8 +396,13 @@ const QString Boards::getAnalogInputName(Board::Type board, int index)
   }
 
   index -= getCapability(board, Board::Sticks);
-
-  if (IS_9X(board) || IS_2560(board) || IS_SKY9X(board)) {
+  if (board == BOARD_I6X) {
+    // i6X has 2 pots: POT1 and POT2 (NUM_POTS=2, NUM_SLIDERS=0)
+    const QString pots[] = { "P1", "P2" };
+    if (index < (int)DIM(pots))
+      return pots[index];
+  }
+  else if (IS_9X(board) || IS_2560(board) || IS_SKY9X(board)) {
     const QString pots[] = {
       "P1",
       "P2",
@@ -393,6 +474,8 @@ const bool Boards::isBoardCompatible(Type board1, Type board2)
 const QString Boards::getBoardName(Board::Type board)
 {
   switch (board) {
+    case BOARD_I6X:
+      return "FlySky i6X";
     case BOARD_STOCK:
       return "9X";
     case BOARD_M128:

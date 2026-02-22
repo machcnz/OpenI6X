@@ -82,7 +82,28 @@ void RleFile::EeFsCreate(uint8_t *eeprom, int size, Board::Type board, unsigned 
       EeFsSetLink(i, i+1);
     EeFsSetLink(eeFsBlocksMax-1, 0);
     eeFsArm->freeList = eeFsFirstBlock;
-    // EeFsFlush();
+  }
+  else if (board == Board::BOARD_I6X) {
+    // i6X uses AVR-style EeFs filesystem with MAXFILES=22, BS=64
+    // sizeof(EeFs) = 8 + 4*22 = 96 — this is what mySize stores
+    // RESV=128 in firmware (reservation), BLOCKS_OFFSET = RESV-BS = 64
+    eeFsArm = (EeFsArm *)eeprom;
+    eeFsVersion    = 5;
+    eeFsSize       = 96;          // sizeof(EeFs) = 8 + 4*MAXFILES(22)
+    eeFsBlockSize  = 64;          // BS
+    eeFsFirstBlock = 1;
+    eeFsBlocksOffset = 64;        // RESV(128) - BS(64)
+    eeFsBlocksMax  = 1 + (size - 128) / eeFsBlockSize;  // use RESV=128 for block layout
+    eeFsLinkSize   = sizeof(int16_t);
+    memset(eeprom, 0, size);
+    eeFsArm->version  = eeFsVersion;
+    eeFsArm->mySize   = eeFsSize;
+    eeFsArm->freeList = 0;
+    eeFsArm->bs       = eeFsBlockSize;
+    for (unsigned int i=eeFsFirstBlock; i<eeFsBlocksMax-1; i++)
+      EeFsSetLink(i, i+1);
+    EeFsSetLink(eeFsBlocksMax-1, 0);
+    eeFsArm->freeList = eeFsFirstBlock;
   }
   else {
     eeFs = (EeFs *)eeprom;
@@ -112,7 +133,6 @@ void RleFile::EeFsCreate(uint8_t *eeprom, int size, Board::Type board, unsigned 
       EeFsSetLink(i, i+1);
     EeFsSetLink(eeFsBlocksMax-1, 0);
     eeFs->freeList = eeFsFirstBlock;
-    // EeFsFlush();
   }
 }
 
@@ -156,6 +176,20 @@ bool RleFile::EeFsOpen(uint8_t *eeprom, int size, Board::Type board)
     eeFsBlocksOffset = eeFsSize - eeFsBlockSize;
     eeFsBlocksMax = 1 + (Boards::getEEpromSize(board)-eeFsSize) / eeFsBlockSize;
     return eeFsArm->mySize == eeFsSize;
+  }
+  else if (board == Board::BOARD_I6X) {
+    // i6X: EeFsArm header, mySize=sizeof(EeFs)=96, RESV=128, BLOCKS_OFFSET=64
+    eeFsArm = (EeFsArm *)eeprom;
+    eeFsVersion    = eeFsArm->version;
+    eeFsSize       = 96;         // sizeof(EeFs) = 8 + 4*22
+    eeFsBlockSize  = 64;         // BS
+    eeFsLinkSize   = sizeof(int16_t);
+    eeFsFirstBlock = 1;
+    eeFsBlocksOffset = 64;       // RESV(128) - BS(64)
+    eeFsBlocksMax  = 1 + (size - 128) / eeFsBlockSize;  // RESV=128 for block layout
+    if (eeFsVersion != 5) return false;
+    if (eeFsArm->bs != 64) return false;
+    return (eeFsArm->mySize == eeFsSize);
   }
   else {
     eeFs = (EeFs *)eeprom;
@@ -331,7 +365,7 @@ unsigned int RleFile::openRd(unsigned int i_fileId)
     m_ofs      = 0;
     m_zeroes   = 0;
     m_bRlc     = 0;
-    m_err      = ERR_NONE;       //error reasons
+    m_err      = ERR_NONE;
     if (IS_ARM(board))
       return eeFsArm->files[m_fileId].typ;
     else
@@ -400,7 +434,7 @@ unsigned int RleFile::readRlc12(uint8_t *buf, unsigned int i_len, bool rlc2)
       m_bRlc   -= lr;
       if(m_bRlc) break;
 
-      if (read(&m_bRlc, 1) !=1) break; //read how many bytes to read
+      if (read(&m_bRlc, 1) !=1) break;
 
       if (!(m_bRlc & 0x7f)) {
         qDebug() << "RLC decoding error!";
@@ -416,7 +450,21 @@ unsigned int RleFile::readRlc12(uint8_t *buf, unsigned int i_len, bool rlc2)
           m_zeroes  = m_bRlc & 0x3f;
           m_bRlc    = 0;
         }
-        //else   m_bRlc
+      }
+      else if (board == Board::BOARD_I6X) {
+        // i6X firmware uses 3-opcode RLC1 (nextRlcWriteStep in eeprom_rlc.cpp):
+        //   0x80|(cnt0<<4)|cnt -> cnt0 zeros then cnt literals (mixed prefix)
+        //   0x40|cnt           -> cnt zeros (pure zero run)
+        //   cnt                -> cnt literals (pure literal run, no high bits)
+        if (m_bRlc & 0x80) {       // mixed: zero prefix + literals
+          m_zeroes = (m_bRlc >> 4) & 0x7;
+          m_bRlc   = m_bRlc & 0x0f;
+        }
+        else if (m_bRlc & 0x40) {  // pure zero run
+          m_zeroes = m_bRlc & 0x3f;
+          m_bRlc   = 0;
+        }
+        // else: pure literal run, m_bRlc already holds the count
       }
       else {
         if(m_bRlc&0x80){ // if contains high byte
@@ -545,7 +593,7 @@ void RleFile::closeTrunc()
   else
     eeFs->files[m_fileId].size = m_pos;
   if (m_currBlk && ( fri = EeFsGetLink(m_currBlk))) EeFsSetLink(m_currBlk, 0);
-  if(fri) EeFsFree( fri );  //chain in
+  if(fri) EeFsFree( fri );
 }
 
 unsigned int RleFile::writeRlc1(unsigned int i_fileId, unsigned int typ, const uint8_t *buf, unsigned int i_len)
@@ -554,14 +602,60 @@ unsigned int RleFile::writeRlc1(unsigned int i_fileId, unsigned int typ, const u
     return 0;
 
   create(i_fileId, typ);
+
+  if (board == Board::BOARD_I6X) {
+    // i6X firmware uses 3-opcode RLC1 (matching nextRlcWriteStep in eeprom_rlc.cpp):
+    //   pure literal run: emit cnt (1..63, no high bits set)
+    //   pure zero run (>=8 or at end): emit 0x40|cnt
+    //   short zero run (<8) followed by literals: emit 0x80|(cnt0<<4)|cnt_lits
+    uint16_t i = 0;
+    while (i < i_len) {
+      if (buf[i] == 0) {
+        // Count zeros
+        uint8_t cnt0 = 0;
+        while (i + cnt0 < i_len && buf[i + cnt0] == 0 && cnt0 < 0x3f)
+          cnt0++;
+        // Short zero run followed by non-zero: use as mixed prefix
+        if (cnt0 < 8 && i + cnt0 < i_len && buf[i + cnt0] != 0) {
+          i += cnt0;
+          // Count following literals (max 15 for nibble)
+          uint8_t cnt = 0;
+          while (i + cnt < i_len && buf[i + cnt] != 0 && cnt < 0x0f)
+            cnt++;
+          uint8_t hdr = (uint8_t)(0x80 | (cnt0 << 4) | cnt);
+          if (write(&hdr, 1) != 1) goto error_i6x;
+          if (write(&buf[i], cnt) != cnt) goto error_i6x;
+          i += cnt;
+        }
+        else {
+          // Pure zero run
+          uint8_t hdr = (uint8_t)(0x40 | cnt0);
+          if (write(&hdr, 1) != 1) goto error_i6x;
+          i += cnt0;
+        }
+      }
+      else {
+        // Pure literal run (max 63, must not set bits 6 or 7)
+        uint8_t cnt = 0;
+        while (i + cnt < i_len && buf[i + cnt] != 0 && cnt < 0x3f)
+          cnt++;
+        if (write(&cnt, 1) != 1) goto error_i6x;
+        if (write(&buf[i], cnt) != cnt) goto error_i6x;
+        i += cnt;
+      }
+    }
+    closeTrunc();
+    return i_len;
+    if(0) { error_i6x: i_len = i; }
+    closeTrunc();
+    return i_len;
+  }
+
+  // Original 2-opcode RLC1 for other boards
   bool state0 = true;
   uint8_t cnt = 0;
   uint16_t i;
 
-  //RLE compression:
-  //rb = read byte
-  //if (rb | 0x80) write rb & 0x7F zeros
-  //else write rb bytes
   for (i=0; i<=i_len; i++)
   {
     bool nst0 = (buf[i] == 0);
@@ -633,31 +727,27 @@ unsigned int RleFile::writeRlc2(unsigned int i_fileId, unsigned int typ, const u
     uint16_t i     = 0;
     if (i_len==0) goto close;
 
-    //RLE compression:
-    //rb = read byte
-    //if (rb | 0x80) write rb & 0x7F zeros
-    //else write rb bytes
-    for (i=1; 1; i++) { // !! laeuft ein byte zu weit !!
+    for (i=1; 1; i++) {
       bool cur0 = buf[i] == 0;
       if (i==i_len || cur0 != run0 || cnt==0x3f || (cnt0 && cnt==0xf)) {
         if (run0){
           assert(cnt0==0);
           if (cnt<8 && i!=i_len)
-            cnt0 = cnt; //aufbew fuer spaeter
+            cnt0 = cnt;
           else {
-            if (write1(cnt|0x40)!=1)                goto error;//-cnt&0x3f
+            if (write1(cnt|0x40)!=1)                goto error;
           }
         }
         else {
           if (cnt0) {
-            if (write1(0x80 | (cnt0<<4) | cnt)!=1)  goto error;//-cnt0xx-cnt
+            if (write1(0x80 | (cnt0<<4) | cnt)!=1)  goto error;
             cnt0 = 0;
           }
           else {
-            if (write1(cnt)!=1)                    goto error;//-cnt
+            if (write1(cnt)!=1)                    goto error;
           }
           uint8_t ret = write(&buf[i-cnt], cnt);
-          if (ret != cnt) { cnt-=ret;                goto error;}//-cnt
+          if (ret != cnt) { cnt-=ret;                goto error;}
         }
         cnt=0;
         if (i==i_len) break;
@@ -701,19 +791,14 @@ uint32_t RleFile::ee32_check_header( struct t_eeprom_header *hptr )
         return 0 ;
 }
 
-// Pass in an even block number, this and the next block will be checked
-// to see which is the most recent, the block_no of the most recent
-// is returned, with the corresponding data size if required
-// and the sequence number if required
 uint32_t RleFile::get_current_block_number( uint32_t block_no, uint16_t *p_size)
 {
   struct t_eeprom_header b0 ;
   struct t_eeprom_header b1 ;
-//  uint32_t sequence_no ;
   uint16_t size ;
 
-  eeprom_read_block( ( uint8_t *)&b0, block_no << 12, sizeof(b0) ) ;          // Sequence # 0
-  eeprom_read_block( ( uint8_t *)&b1, (block_no+1) << 12, sizeof(b1) ) ;      // Sequence # 1
+  eeprom_read_block( ( uint8_t *)&b0, block_no << 12, sizeof(b0) ) ;
+  eeprom_read_block( ( uint8_t *)&b1, (block_no+1) << 12, sizeof(b1) ) ;
 
   if ( ee32_check_header( &b0 ) == 0 )
   {
@@ -723,19 +808,16 @@ uint32_t RleFile::get_current_block_number( uint32_t block_no, uint16_t *p_size)
   }
 
   size = b0.data_size ;
-  // sequence_no = b0.sequence_no ;
   if ( ee32_check_header( &b0 ) == 0 )
   {
     if ( ee32_check_header( &b1 ) != 0 )
     {
       size = b1.data_size ;
-      // sequence_no = b1.sequence_no ;
       block_no += 1 ;
     }
     else
     {
       size = 0 ;
-      // sequence_no = 1 ;
     }
   }
   else
@@ -745,7 +827,6 @@ uint32_t RleFile::get_current_block_number( uint32_t block_no, uint16_t *p_size)
       if ( b1.sequence_no > b0.sequence_no )
       {
         size = b1.data_size ;
-        // sequence_no = b1.sequence_no ;
         block_no += 1 ;
       }
     }

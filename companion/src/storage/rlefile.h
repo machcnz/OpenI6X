@@ -51,11 +51,11 @@ PACK(struct EeFs{
 
 PACK(struct EeFsArm {
   uint8_t   version;
-  uint16_t  mySize;
-  uint16_t  freeList;
+  uint16_t  mySize; // 2 bytes
+  uint16_t  freeList; // 2 bytes
   uint8_t   bs;
   uint8_t  spare[2];
-  DirEntArm files[62];
+  DirEntArm files[62]; // 62 entries × 4 bytes = 248 bytes
 });
 
 struct t_eeprom_header

@@ -38,6 +38,7 @@
 #include "storage.h"
 #include "translations.h"
 #include "helpers.h"
+#include "firmwares/openi6x/openi6xinterface.h"
 
 #ifdef __APPLE__
 #include <QProxyStyle>
@@ -235,6 +236,7 @@ int main(int argc, char *argv[])
 
   registerStorageFactories();
   registerOpenTxFirmwares();
+  registerOpenI6xFirmwares();
   SimulatorLoader::registerSimulators();
 
   Profile & profile = g.currentProfile();

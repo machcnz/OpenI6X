@@ -1530,7 +1530,10 @@ void MdiChild::writeEeprom()  // write to Tx
   }
   else {
     QString tempFile = generateProcessUniqueTempFileName("temp.bin");
-    saveFile(tempFile, false);
+    if (!saveFile(tempFile, false)) {
+      QMessageBox::critical(this, CPN_STR_TTL_ERROR, tr("Cannot write models to temporary file - radio will not be updated."));
+      return;
+    }
     if (!QFileInfo(tempFile).exists()) {
       QMessageBox::critical(this, CPN_STR_TTL_ERROR, tr("Cannot write temporary file!"));
       return;

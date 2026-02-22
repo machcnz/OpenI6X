@@ -187,6 +187,19 @@ qt5_add_resources(common_RCC ${common_RESOURCES})
 
 add_library(common ${common_SRCS} ${common_RCC})
 
+#target_link_libraries(common
+#  firmwares
+#  storage
+#  simulation
+#  maxLibQtWidgets
+#  Qt5::Core
+#  Qt5::Xml
+#  Qt5::Widgets
+#  ${PTHREAD_LIBRARY}
+#  ${SDL_LIBRARY}
+#  ${WIN_LINK_LIBRARIES}
+#  )
+
 target_link_libraries(common
   firmwares
   storage
@@ -195,10 +208,13 @@ target_link_libraries(common
   Qt5::Core
   Qt5::Xml
   Qt5::Widgets
+  Qt5::Network
   ${PTHREAD_LIBRARY}
   ${SDL_LIBRARY}
   ${WIN_LINK_LIBRARIES}
-  )
+)
+
+
 
 set(CPN_COMMON_LIB common)
 
@@ -315,7 +331,15 @@ qt5_wrap_ui(companion_SRCS ${companion_UIS})
 qt5_wrap_cpp(companion_SRCS ${companion_MOC_HDRS})
 
 add_executable(${COMPANION_NAME} MACOSX_BUNDLE ${WIN_EXECUTABLE_TYPE} ${companion_SRCS} ${icon_RC})
-target_link_libraries(${COMPANION_NAME} PRIVATE generaledit modeledit qcustomplot shared ${CPN_COMMON_LIB})
+target_link_libraries(${COMPANION_NAME} PRIVATE
+  generaledit
+  modeledit
+  qcustomplot
+  shared
+  ${CPN_COMMON_LIB}
+  Qt5::PrintSupport
+)
+
 
 PrintTargetReport("${COMPANION_NAME}")
 

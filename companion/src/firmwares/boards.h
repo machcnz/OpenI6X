@@ -1,21 +1,7 @@
 /*
  * Copyright (C) OpenTX
  *
- * Based on code named
- *   th9x - http://code.google.com/p/th9x
- *   er9x - http://code.google.com/p/er9x
- *   gruvin9x - http://code.google.com/p/gruvin9x
- *
  * License GPLv2: http://www.gnu.org/licenses/gpl-2.0.html
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
  */
 
 #ifndef _BOARDS_H_
@@ -46,6 +32,7 @@ namespace Board {
     BOARD_X12S,
     BOARD_X10,
     BOARD_TARANIS_XLITE,
+    BOARD_I6X,
     BOARD_ENUM_COUNT
   };
 
@@ -132,10 +119,10 @@ namespace Board {
     SwitchPosition(unsigned int index, unsigned int position):
       index(index),
       position(position)
-      {
-      }
-      unsigned int index;
-      unsigned int position;
+    {
+    }
+    unsigned int index;
+    unsigned int position;
   };
 
 }
@@ -144,62 +131,74 @@ class Boards
 {
   Q_DECLARE_TR_FUNCTIONS(Boards)
 
-  public:
+public:
+  Boards(Board::Type board)
+  {
+    setBoardType(board);
+  }
 
-    Boards(Board::Type board)
-    {
-      setBoardType(board);
-    }
+  void setBoardType(const Board::Type & board);
+  Board::Type getBoardType() const { return m_boardType; }
 
-    void setBoardType(const Board::Type & board);
-    Board::Type getBoardType() const { return m_boardType; }
+  const uint32_t getFourCC() const { return getFourCC(m_boardType); }
+  const int getEEpromSize() const { return getEEpromSize(m_boardType); }
+  const int getFlashSize() const { return getFlashSize(m_boardType); }
+  const Board::SwitchInfo getSwitchInfo(int index) const { return getSwitchInfo(m_boardType, index); }
+  const int getCapability(Board::Capability capability) const { return getCapability(m_boardType, capability); }
+  const QString getAnalogInputName(int index) const { return getAnalogInputName(m_boardType, index); }
+  const bool isBoardCompatible(Board::Type board2) const { return isBoardCompatible(m_boardType, board2); }
 
-    const uint32_t getFourCC() const { return getFourCC(m_boardType); }
-    const int getEEpromSize() const { return getEEpromSize(m_boardType); }
-    const int getFlashSize() const { return getFlashSize(m_boardType); }
-    const Board::SwitchInfo getSwitchInfo(int index) const { return getSwitchInfo(m_boardType, index); }
-    const int getCapability(Board::Capability capability) const { return getCapability(m_boardType, capability); }
-    const QString getAnalogInputName(int index) const { return getAnalogInputName(m_boardType, index); }
-    const bool isBoardCompatible(Board::Type board2) const { return isBoardCompatible(m_boardType, board2); }
+  static uint32_t getFourCC(Board::Type board);
+  static const int getEEpromSize(Board::Type board);
+  static const int getFlashSize(Board::Type board);
+  static const Board::SwitchInfo getSwitchInfo(Board::Type board, int index);
+  static const int getCapability(Board::Type board, Board::Capability capability);
+  static const QString getAxisName(int index);
+  static const QString getAnalogInputName(Board::Type board, int index);
+  static const bool isBoardCompatible(Board::Type board1, Board::Type board2);
+  static const QString getBoardName(Board::Type board);
 
-    static uint32_t getFourCC(Board::Type board);
-    static const int getEEpromSize(Board::Type board);
-    static const int getFlashSize(Board::Type board);
-    static const Board::SwitchInfo getSwitchInfo(Board::Type board, int index);
-    static const int getCapability(Board::Type board, Board::Capability capability);
-    static const QString getAxisName(int index);
-    static const QString getAnalogInputName(Board::Type board, int index);
-    static const bool isBoardCompatible(Board::Type board1, Board::Type board2);
-    static const QString getBoardName(Board::Type board);
-
-  protected:
-
-    Board::Type m_boardType;
+protected:
+  Board::Type m_boardType;
 };
 
 // temporary aliases for transition period, use Boards class instead.
 #define getBoardCapability(b__, c__)   Boards::getCapability(b__, c__)
 
-#define IS_9X(board)                   (board==Board::BOARD_STOCK || board==Board::BOARD_M128)
-#define IS_STOCK(board)                (board==Board::BOARD_STOCK)
-#define IS_M128(board)                 (board==Board::BOARD_M128)
-#define IS_2560(board)                 (board==Board::BOARD_GRUVIN9X || board==Board::BOARD_MEGA2560)
-#define IS_SKY9X(board)                (board==Board::BOARD_SKY9X || board==Board::BOARD_9XRPRO || board==Board::BOARD_AR9X)
-#define IS_9XRPRO(board)               (board==Board::BOARD_9XRPRO)
-#define IS_TARANIS_XLITE(board)        (board==Board::BOARD_TARANIS_XLITE)
-#define IS_TARANIS_X7(board)           (board==Board::BOARD_TARANIS_X7)
-#define IS_TARANIS_X9(board)           (board==Board::BOARD_TARANIS_X9D || board==Board::BOARD_TARANIS_X9DP || board==Board::BOARD_TARANIS_X9E)
-#define IS_TARANIS_X9D(board)          (board==Board::BOARD_TARANIS_X9D || board==Board::BOARD_TARANIS_X9DP)
-#define IS_TARANIS_PLUS(board)         (board==Board::BOARD_TARANIS_X9DP || board==Board::BOARD_TARANIS_X9E)
-#define IS_TARANIS_X9E(board)          (board==Board::BOARD_TARANIS_X9E)
+#define IS_9X(board)                   ((board)==Board::BOARD_STOCK || (board)==Board::BOARD_M128)
+#define IS_STOCK(board)                ((board)==Board::BOARD_STOCK)
+#define IS_M128(board)                 ((board)==Board::BOARD_M128)
+#define IS_2560(board)                 ((board)==Board::BOARD_GRUVIN9X || (board)==Board::BOARD_MEGA2560)
+
+#define IS_SKY9X(board)                ((board)==Board::BOARD_SKY9X || (board)==Board::BOARD_9XRPRO || (board)==Board::BOARD_AR9X)
+#define IS_9XRPRO(board)               ((board)==Board::BOARD_9XRPRO)
+
+#define IS_TARANIS_XLITE(board)        ((board)==Board::BOARD_TARANIS_XLITE)
+#define IS_TARANIS_X7(board)           ((board)==Board::BOARD_TARANIS_X7)
+#define IS_TARANIS_X9(board)           ((board)==Board::BOARD_TARANIS_X9D || (board)==Board::BOARD_TARANIS_X9DP || (board)==Board::BOARD_TARANIS_X9E)
+#define IS_TARANIS_X9D(board)          ((board)==Board::BOARD_TARANIS_X9D || (board)==Board::BOARD_TARANIS_X9DP)
+#define IS_TARANIS_PLUS(board)         ((board)==Board::BOARD_TARANIS_X9DP || (board)==Board::BOARD_TARANIS_X9E)
+#define IS_TARANIS_X9E(board)          ((board)==Board::BOARD_TARANIS_X9E)
+
+// IMPORTANT: I6X is NOT a Taranis. Keep it separate.
 #define IS_TARANIS(board)              (IS_TARANIS_X9(board) || IS_TARANIS_X7(board) || IS_TARANIS_XLITE(board))
-#define IS_TARANIS_SMALL(board)        (board==Board::BOARD_TARANIS_X7 || board==Board::BOARD_TARANIS_XLITE)
+#define IS_TARANIS_SMALL(board)        ((board)==Board::BOARD_TARANIS_X7 || (board)==Board::BOARD_TARANIS_XLITE)
 #define IS_TARANIS_NOT_X9E(board)      (IS_TARANIS(board) && !IS_TARANIS_X9E(board))
-#define IS_HORUS_X12S(board)           (board==Board::BOARD_X12S)
-#define IS_HORUS_X10(board)            (board==Board::BOARD_X10)
+
+#define IS_HORUS_X12S(board)           ((board)==Board::BOARD_X12S)
+#define IS_HORUS_X10(board)            ((board)==Board::BOARD_X10)
 #define IS_HORUS(board)                (IS_HORUS_X12S(board) || IS_HORUS_X10(board))
+
+#define IS_I6X(board)                  ((board)==Board::BOARD_I6X)
+
+// STM32 class boards (Companion-side)
+#define IS_STM32(board)                (IS_TARANIS(board) || IS_HORUS(board) || IS_I6X(board))
+
 #define IS_HORUS_OR_TARANIS(board)     (IS_HORUS(board) || IS_TARANIS(board))
-#define IS_STM32(board)                (IS_TARANIS(board) || IS_HORUS(board))
+
+// EeFs ARM is used on STM32 targets (Taranis/Horus/I6X), not on SKY9X.
+#define IS_EEFS_ARM(board)             (IS_STM32(board) && !IS_SKY9X(board))
+
 #define IS_ARM(board)                  (IS_STM32(board) || IS_SKY9X(board))
 #define HAS_LARGE_LCD(board)           (IS_HORUS(board) || IS_TARANIS_X9(board))
 

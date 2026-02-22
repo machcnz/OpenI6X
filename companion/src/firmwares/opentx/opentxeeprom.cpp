@@ -31,38 +31,47 @@ using namespace Board;
 // Macro used for Gruvin9x board and M128 board between versions 213 and 214 (when there were stack overflows!)
 #define IS_DBLRAM(board, version)             ((IS_2560(board) && version >= 213) || (board==BOARD_M128 && version >= 213 && version <= 214))
 
-#define HAS_PERSISTENT_TIMERS(board)          (IS_ARM(board) || IS_2560(board))
-#define MAX_VIEWS(board)                      (HAS_LARGE_LCD(board) ? 2 : 256)
-#define MAX_POTS(board, version)              (IS_TARANIS_NOT_X9E(board) && version < 216 ? 2 : Boards::getCapability(board, Board::Pots))
-#define MAX_SLIDERS(board)                    (IS_HORUS_X10(board) ? 4 : (Boards::getCapability(board, Board::Sliders))) //TODO need to be remove when x10 eeprom gets fixed
-#define MAX_MOUSE_ANALOGS(board)              (IS_HORUS_X10(board) ? 2 : (Boards::getCapability(board, Board::MouseAnalogs))) //TODO need to be remove when x10 eeprom gets fixed
-#define MAX_SWITCHES(board, version)          (Boards::getCapability(board, Board::Switches))
-#define MAX_SWITCH_SLOTS(board, version)      (IS_TARANIS_X9E(board) ? 32 : 8)  // bitsize of swconfig_t / 2 (see radio/src/datastructs.h)
-#define MAX_SWITCHES_POSITION(board, version) (Boards::getCapability(board, Board::SwitchPositions))
-#define MAX_ROTARY_ENCODERS(board)            (IS_2560(board) ? 2 : (IS_SKY9X(board) ? 1 : 0))
-#define MAX_FLIGHT_MODES(board, version)      (IS_ARM(board) ? 9 :  (IS_DBLRAM(board, version) ? 6 :  5))
-#define MAX_TIMERS(board, version)            ((IS_ARM(board) && version >= 217) ? 3 : 2)
-#define MAX_MIXERS(board, version)            (IS_ARM(board) ? 64 : 32)
-#define MAX_CHANNELS(board, version)          (IS_ARM(board) ? 32 : 16)
-#define MAX_TRIMS(board)                      (Boards::getCapability(board, Board::NumTrims))
-#define MAX_EXPOS(board, version)             (IS_ARM(board) ? ((IS_HORUS_OR_TARANIS(board) && version >= 216) ? 64 : 32) : (IS_DBLRAM(board, version) ? 16 : 14))
-#define MAX_LOGICAL_SWITCHES(board, version)  (IS_ARM(board) ? (version >= 218 ? 64 : 32) : ((IS_DBLEEPROM(board, version) && version<217) ? 15 : 12))
-#define MAX_CUSTOM_FUNCTIONS(board, version)  (IS_ARM(board) ? (version >= 216 ? 64 : 32) : (IS_DBLEEPROM(board, version) ? 24 : 16))
-#define MAX_CURVES(board, version)            (IS_ARM(board) ? ((HAS_LARGE_LCD(board) && version >= 216) ? 32 : 16) : 8)
-#define MAX_GVARS(board, version)             ((IS_ARM(board) && version >= 216) ? 9 : 5)
-#define MAX_SCRIPTS(board)                    (IS_HORUS(board) ? 9 : 7)
-#define MAX_TELEMETRY_SENSORS(board, version) (32)
-#define NUM_PPM_INPUTS(board, version)        ((IS_ARM(board) && version >= 216) ? 16 : 8)
-#define ROTENC_COUNT(board, version)          (IS_ARM(board) ? ((IS_STM32(board) && version >= 218) ? 0 : 1) : (IS_2560(board) ? 2 : 0))
-#define MAX_AUX_TRIMS(board)                  (IS_HORUS(board) ? 2 : 0)
+// --- OpenI6X (FlySky i6X) EEPROM geometry must match radio/src/dataconstants.h (PCBI6X) ---
+#define IS_I6X(board)                      ((board) == Board::BOARD_I6X)
 
+#define HAS_PERSISTENT_TIMERS(board)       (IS_ARM(board) || IS_2560(board))
+#define MAX_VIEWS(board)                   (HAS_LARGE_LCD(board) ? 2 : 256)
+#define MAX_POTS(board, version)           (IS_TARANIS_NOT_X9E(board) && version < 216 ? 2 : Boards::getCapability(board, Board::Pots))
+#define MAX_SLIDERS(board)                 (IS_HORUS_X10(board) ? 4 : Boards::getCapability(board, Board::Sliders))
+#define MAX_MOUSE_ANALOGS(board)           (IS_HORUS_X10(board) ? 2 : Boards::getCapability(board, Board::MouseAnalogs))
+#define MAX_SWITCHES(board, version)       (Boards::getCapability(board, Board::Switches))
+#define MAX_SWITCH_SLOTS(board, version)   (IS_TARANIS_X9E(board) ? 32 : 8)
+#define MAX_SWITCHES_POSITION(board, ver)  (Boards::getCapability(board, Board::SwitchPositions))
+#define MAX_ROTARY_ENCODERS(board)         (IS_2560(board) ? 2 : (IS_SKY9X(board) ? 1 : 0))
+
+// i6X firmware limits (radio/src/dataconstants.h PCBI6X):
+// MAX_OUTPUT_CHANNELS 16, MAX_FLIGHT_MODES 5, MAX_MIXERS 32, MAX_EXPOS 14,
+// MAX_LOGICAL_SWITCHES 12, MAX_SPECIAL_FUNCTIONS 18, MAX_INPUTS 16, MAX_TELEMETRY_SENSORS 40
+#define MAX_FLIGHT_MODES(board, version)   (IS_I6X(board) ? 5  : (IS_ARM(board) ? 9  : (IS_DBLRAM(board, version) ? 6 : 5)))
+#define MAX_TIMERS(board, version)         ((IS_ARM(board) && version >= 217) ? 3 : 2)
+#define MAX_MIXERS(board, version)         (IS_I6X(board) ? 32 : (IS_ARM(board) ? 64 : 32))
+#define MAX_CHANNELS(board, version)       (IS_I6X(board) ? 16 : (IS_ARM(board) ? 32 : 16))
+#define MAX_TRIMS(board)                   (Boards::getCapability(board, Board::NumTrims))
+#define MAX_EXPOS(board, version)          (IS_I6X(board) ? 14 : (IS_ARM(board) ? ((IS_HORUS_OR_TARANIS(board) && version >= 216) ? 64 : 32) : (IS_DBLRAM(board, version) ? 16 : 14)))
+#define MAX_LOGICAL_SWITCHES(board, ver)   (IS_I6X(board) ? 12 : (IS_ARM(board) ? (ver >= 218 ? 64 : 32) : ((IS_DBLEEPROM(board, ver) && ver < 217) ? 15 : 12)))
+#define MAX_CUSTOM_FUNCTIONS(board, ver)   (IS_I6X(board) ? 18 : (IS_ARM(board) ? (ver >= 216 ? 64 : 32) : (IS_DBLEEPROM(board, ver) ? 24 : 16)))
+#define MAX_CURVES(board, version)         (IS_ARM(board) ? ((HAS_LARGE_LCD(board) && version >= 216) ? 32 : 16) : 8)
+#define MAX_GVARS(board, version)          ((IS_ARM(board) && version >= 216) ? 9 : 5)
+#define MAX_SCRIPTS(board)                 (IS_I6X(board) ? 0 : (IS_HORUS(board) ? 9 : 7))
+#define MAX_TELEMETRY_SENSORS(board, ver)  (IS_I6X(board) ? 40 : 32)
+#define NUM_PPM_INPUTS(board, version)     ((IS_ARM(board) && version >= 216) ? 16 : 8)
+#define ROTENC_COUNT(board, version)       (IS_ARM(board) ? ((IS_STM32(board) && version >= 218) ? 0 : 1) : (IS_2560(board) ? 2 : 0))
+#define MAX_AUX_TRIMS(board)               (IS_HORUS(board) ? 2 : 0)
+
+// i6X input name count is MAX_INPUTS=16 (radio/src/dataconstants.h PCBI6X)
+#define MAX_INPUTS(board, version)         (IS_I6X(board) ? 16 : (IS_ARM(board) ? 32 : 0))
 #define IS_AFTER_RELEASE_21_MARCH_2013(board, version) (version >= 214 || (!IS_ARM(board) && version >= 213))
 #define IS_AFTER_RELEASE_23_MARCH_2013(board, version) (version >= 214 || (board==BOARD_STOCK && version >= 213))
 
 inline int switchIndex(int i, Board::Type board, unsigned int version)
 {
   bool afterrelease21March2013 = IS_AFTER_RELEASE_21_MARCH_2013(board, version);
-  if (!IS_HORUS_OR_TARANIS(board) && afterrelease21March2013)
+  if (!IS_HORUS_OR_TARANIS(board) && board != Board::BOARD_I6X && afterrelease21March2013)
     return (i<=3 ? i+3 : (i<=6 ? i-3 : i));
   else
     return i;
@@ -80,6 +89,10 @@ class SwitchesConversionTable: public ConversionTable {
         for (int i=0; i<5; i++) {
           addConversion(RawSwitch(SWITCH_TYPE_TIMER_MODE, i), val++);
         }
+        // Export-only: companion ModelData may hold SWITCH_TYPE_NONE for an unset timer
+        // (equivalent to TIMER_MODE_0 = OFF in firmware, raw value 0).
+        // Import always gives TIMER_MODE,0 for raw 0; this allows NONE to export cleanly.
+        addExportConversion(RawSwitch(SWITCH_TYPE_NONE), 0);
       }
       else {
         addConversion(RawSwitch(SWITCH_TYPE_NONE), val++);
@@ -143,15 +156,6 @@ class SwitchesConversionTable: public ConversionTable {
             addConversion(RawSwitch(SWITCH_TYPE_FLIGHT_MODE, -i), -val+offset);
             addConversion(RawSwitch(SWITCH_TYPE_FLIGHT_MODE, i), val++);
           }
-        }
-      }
-
-      if (IS_ARM(board) && version >= 218) {
-        addConversion(RawSwitch(SWITCH_TYPE_TELEMETRY, -1), -val+offset);
-        addConversion(RawSwitch(SWITCH_TYPE_TELEMETRY, 1), val++);
-        for (int i=1; i<=CPN_MAX_SENSORS; i++) {
-          addConversion(RawSwitch(SWITCH_TYPE_SENSOR, -i), -val+offset);
-          addConversion(RawSwitch(SWITCH_TYPE_SENSOR, i), val++);
         }
       }
 
@@ -449,6 +453,10 @@ class SwitchField: public ConversionField< SignedField<N> > {
     virtual void beforeExport()
     {
       _switch = sw.toValue();
+      if (board == Board::BOARD_I6X) {
+        qDebug("[i6X SwitchField] beforeExport: sw.type=%d sw.index=%d toValue=%d toString=%s",
+               (int)sw.type, sw.index, _switch, qPrintable(sw.toString(board)));
+      }
       ConversionField< SignedField<N> >::beforeExport();
     }
 
@@ -456,6 +464,10 @@ class SwitchField: public ConversionField< SignedField<N> > {
     {
       ConversionField< SignedField<N> >::afterImport();
       sw = RawSwitch(_switch);
+      if (board == Board::BOARD_I6X) {
+        qDebug("[i6X SwitchField] afterImport: raw=%d → sw.type=%d sw.index=%d toString=%s",
+               _switch, (int)sw.type, sw.index, qPrintable(sw.toString(board)));
+      }
       qCDebug(eepromImport) << QString("imported %1: %2").arg(ConversionField< SignedField<N> >::internalField.getName()).arg(sw.toString(board));
     }
 
@@ -2054,25 +2066,38 @@ class CustomFunctionsConversionTable: public ConversionTable {
           addConversion(FuncPlayBoth, val++);
         addConversion(FuncPlayValue, val++);
         if (IS_ARM(board)) {
-          addConversion(FuncReserve, val++);
-          if (IS_STM32(board))
-            addConversion(FuncPlayScript, val++);
-          else
+          if (board == Board::BOARD_I6X) {
+            // i6X firmware Functions enum (dataconstants.h PCBI6X):
+            // FUNC_BACKGND_MUSIC, FUNC_BACKGND_MUSIC_PAUSE, FUNC_LOGS are all
+            // commented out. Slots are: RESERVE4, PLAY_SCRIPT, RESERVE5, VARIO,
+            // HAPTIC, BACKLIGHT, SCREENSHOT
+            addConversion(FuncReserve, val++);        // fw: FUNC_RESERVE4
+            addConversion(FuncPlayScript, val++);     // fw: FUNC_PLAY_SCRIPT
+            addConversion(FuncReserve, val++);        // fw: FUNC_RESERVE5
+          }
+          else {
             addConversion(FuncReserve, val++);
-          addConversion(FuncReserve, val++);
-          addConversion(FuncBackgroundMusic, val++);
-          addConversion(FuncBackgroundMusicPause, val++);
+            if (IS_STM32(board))
+              addConversion(FuncPlayScript, val++);
+            else
+              addConversion(FuncReserve, val++);
+            addConversion(FuncReserve, val++);
+            addConversion(FuncBackgroundMusic, val++);
+            addConversion(FuncBackgroundMusicPause, val++);
+          }
         }
         addConversion(FuncVario, val++);
         addConversion(FuncPlayHaptic, val++);
-        if (IS_2560(board) || IS_ARM(board) )
+        if (IS_2560(board) || (IS_ARM(board) && board != Board::BOARD_I6X))
           addConversion(FuncLogs, val++);
         addConversion(FuncBacklight, val++);
-        if (IS_STM32(board))
+
+        // radio/src/dataconstants.h: FUNC_SCREENSHOT is only compiled for PCBTARANIS
+        if (IS_TARANIS(board))
           addConversion(FuncScreenshot, val++);
-      }
-      else {
-        addConversion(FuncPlaySound, val++);
+          }
+          else {
+            addConversion(FuncPlaySound, val++);
         if (!IS_HORUS_OR_TARANIS(board))
           addConversion(FuncPlayHaptic, val++);
         addConversion(FuncReset, val++);
@@ -2166,6 +2191,8 @@ class ArmCustomFunctionField: public TransformedField {
         internalField.Append(new CharField<8>(this, _param, false));
       else if (IS_TARANIS(board))
         internalField.Append(new CharField<10>(this, _param, false));
+      else if (board == Board::BOARD_I6X)
+        internalField.Append(new CharField<4>(this, _param, false));
       else
         internalField.Append(new CharField<6>(this, _param, false));
 
@@ -3213,7 +3240,8 @@ OpenTxModelData::OpenTxModelData(ModelData & modelData, Board::Type board, unsig
     internalField.Append(new SwitchesWarningField<32>(this, modelData.switchWarningStates, board, version));
   else if (IS_TARANIS_X9E(board))
     internalField.Append(new SwitchesWarningField<64>(this, modelData.switchWarningStates, board, version));
-  else if (IS_TARANIS(board))
+  else if (IS_TARANIS(board) || IS_I6X(board))
+    // i6X: swarnstate_t = uint16_t (same as Taranis), 6 switches × 3 positions = 18 states in 16 bits
     internalField.Append(new SwitchesWarningField<16>(this, modelData.switchWarningStates, board, version));
   else
     internalField.Append(new SwitchesWarningField<8>(this, modelData.switchWarningStates, board, version));
@@ -3266,7 +3294,8 @@ OpenTxModelData::OpenTxModelData(ModelData & modelData, Board::Type board, unsig
   int modulesCount = 2;
 
   if (IS_STM32(board)) {
-    modulesCount = 3;
+    // i6X has NUM_MODULES=2 (radio/src/dataconstants.h PCBI6X), not 3
+    modulesCount = IS_I6X(board) ? 2 : 3;
     if (version >= 217) {
       internalField.Append(new SpareBitsField<3>(this));
       internalField.Append(new UnsignedField<3>(this, modelData.trainerMode));
@@ -3291,6 +3320,11 @@ OpenTxModelData::OpenTxModelData(ModelData & modelData, Board::Type board, unsig
 
   if (IS_ARM(board) && version >= 215) {
     for (int module=0; module<modulesCount; module++) {
+      if (IS_I6X(board)) {
+        // i6X firmware ModuleData has an extra uint8_t type field (full byte) before rfProtocol.
+        // Original OpenTX used a bitfield here. Skip it as spare.
+        internalField.Append(new SpareBitsField<8>(this)); // ModuleData.type (i6X specific)
+      }
       if (version >= 217) {
         internalField.Append(new ConversionField<SignedField<4> >(this, modelData.moduleData[module].protocol, &protocolsConversionTable, "Protocol", DataField::tr("OpenTX doesn't accept this radio protocol")));
         internalField.Append(new SignedField<4>(this, subprotocols[module]));
@@ -3308,8 +3342,11 @@ OpenTxModelData::OpenTxModelData(ModelData & modelData, Board::Type board, unsig
       else {
         internalField.Append(new ConversionField<UnsignedField<8> >(this, modelData.moduleData[module].failsafeMode, -1));
       }
-      for (int i=0; i<32; i++) {
-        internalField.Append(new SignedField<16>(this, modelData.moduleData[module].failsafeChannels[i]));
+      if (!IS_I6X(board)) {
+        // Mainline OpenTX: failsafeChannels[32] is inside each ModuleData
+        for (int i=0; i<MAX_CHANNELS(board, version); i++) {
+          internalField.Append(new SignedField<16>(this, modelData.moduleData[module].failsafeChannels[i]));
+        }
       }
       if (version >= 217) {
         internalField.Append(new ConversionField< SignedField<6> >(this, modelData.moduleData[module].ppm.delay, exportPpmDelay, importPpmDelay));
@@ -3323,6 +3360,17 @@ OpenTxModelData::OpenTxModelData(ModelData & modelData, Board::Type board, unsig
         internalField.Append(new BoolField<8>(this, modelData.moduleData[module].ppm.pulsePol));
       }
     }
+  }
+
+  if (IS_I6X(board) && version >= 215) {
+    // i6X firmware moved failsafeChannels out of ModuleData into ModelData as a single array.
+    // Serialize it once here, after all modules, with the correct i6X count of 16.
+    for (int i=0; i<MAX_CHANNELS(board, version); i++) {
+      internalField.Append(new SignedField<16>(this, modelData.moduleData[0].failsafeChannels[i]));
+    }
+    // i6X firmware has TrainerModuleData (6 bytes) after failsafeChannels in ModelData.
+    // Companion doesn't model trainerData, so skip it with spare bits.
+    internalField.Append(new SpareBitsField<48>(this)); // TrainerModuleData = 6 bytes (confirmed by CHKSIZE)
   }
 
   if (IS_TARANIS(board) && version < 218) {
@@ -3365,7 +3413,8 @@ OpenTxModelData::OpenTxModelData(ModelData & modelData, Board::Type board, unsig
   }
 
   if (IS_ARM(board) && version >= 216) {
-    for (int i=0; i<32; i++) {
+    const int inputCount = IS_I6X(board) ? 16 : 32;  // i6X MAX_INPUTS=16
+    for (int i=0; i<inputCount; i++) {
       if (HAS_LARGE_LCD(board))
         internalField.Append(new ZCharField<4>(this, modelData.inputNames[i], "Input name"));
       else
@@ -3689,27 +3738,43 @@ OpenTxGeneralData::OpenTxGeneralData(GeneralSettings & generalData, Board::Type 
       if (version < 218) internalField.Append(new UnsignedField<16>(this, generalData.mAhUsed));
       internalField.Append(new UnsignedField<32>(this, generalData.globalTimer));
       if (version < 218) internalField.Append(new SignedField<8>(this, generalData.temperatureCalib));
-      internalField.Append(new UnsignedField<4>(this, generalData.bluetoothBaudrate));
-      internalField.Append(new UnsignedField<4>(this, generalData.bluetoothMode));
+      if (board != Board::BOARD_I6X) {
+        // i6X EXTRA_GENERAL_FIELDS_ARM has no bluetoothBaudrate/bluetoothMode
+        internalField.Append(new UnsignedField<4>(this, generalData.bluetoothBaudrate));
+        internalField.Append(new UnsignedField<4>(this, generalData.bluetoothMode));
+      }
       if (version < 218) internalField.Append(new BoolField<8>(this, generalData.optrexDisplay));
       if (version < 218) internalField.Append(new UnsignedField<8>(this, generalData.sticksGain));
     }
     if (version >= 214) {
       if (version < 218) internalField.Append(new UnsignedField<8>(this, generalData.rotarySteps));
-      internalField.Append(new UnsignedField<8>(this, generalData.countryCode));
+      if (board != Board::BOARD_I6X) {
+        // i6X EXTRA_GENERAL_FIELDS_ARM has no countryCode
+        internalField.Append(new UnsignedField<8>(this, generalData.countryCode));
+      }
       internalField.Append(new UnsignedField<1>(this, generalData.imperial));
       if (version >= 218) {
         internalField.Append(new BoolField<1>(this, generalData.jitterFilter));
         internalField.Append(new BoolField<1>(this, generalData.disableRssiPoweroffAlarm));
         internalField.Append(new UnsignedField<2>(this, generalData.usbMode));
-        internalField.Append(new SpareBitsField<3>(this));
+        if (board == Board::BOARD_I6X) {
+          // i6X: spare:1 ppmunit:2 follow immediately per EXTRA_GENERAL_FIELDS_ARM
+          // ppmunit has no Companion GeneralSettings equivalent - consume as spare
+          internalField.Append(new SpareBitsField<3>(this));
+        }
+        else {
+          internalField.Append(new SpareBitsField<3>(this));
+        }
       }
       else {
         internalField.Append(new SpareBitsField<7>(this));
       }
     }
     if (version >= 215) {
-      internalField.Append(new CharField<2>(this, generalData.ttsLanguage, true, "TTS language"));
+      if (board != Board::BOARD_I6X) {
+        // i6X EXTRA_GENERAL_FIELDS_ARM has no ttsLanguage
+        internalField.Append(new CharField<2>(this, generalData.ttsLanguage, true, "TTS language"));
+      }
       if (version >= 218) {
         internalField.Append(new SignedField<4>(this, generalData.beepVolume));
         internalField.Append(new SignedField<4>(this, generalData.wavVolume));
@@ -3735,41 +3800,47 @@ OpenTxGeneralData::OpenTxGeneralData(GeneralSettings & generalData, Board::Type 
     }
 
     if (IS_STM32(board) && version >= 216) {
-      if (version >= 218) {
-        internalField.Append(new UnsignedField<4>(this, generalData.hw_uartMode));
-        for (uint8_t i=0; i<4; i++) {
-          internalField.Append(new UnsignedField<1>(this, generalData.sliderConfig[i]));
-        }
-      }
-      else if (version >= 217) {
-        internalField.Append(new UnsignedField<6>(this, generalData.hw_uartMode));
-        if (IS_TARANIS_X9E(board)) {
-          internalField.Append(new UnsignedField<1>(this, generalData.sliderConfig[2]));
-          internalField.Append(new UnsignedField<1>(this, generalData.sliderConfig[3]));
-        }
-        else {
-          internalField.Append(new SpareBitsField<2>(this));
-        }
+      if (board == BOARD_I6X) {
+        // i6X has no hw_uartMode, sliders, pots or backlightColor in this position.
+        // Nothing to emit here - i6X EXTRA fields come in the switchConfig/name block below.
       }
       else {
-        internalField.Append(new UnsignedField<8>(this, generalData.hw_uartMode));
-      }
-      if (IS_HORUS(board)) {
-        for (int i=0; i<16; i++) {
-          if (i < MAX_SWITCHES(board, version))
-            internalField.Append(new UnsignedField<2>(this, generalData.switchConfig[i]));
+        if (version >= 218) {
+          internalField.Append(new UnsignedField<4>(this, generalData.hw_uartMode));
+          for (uint8_t i=0; i<4; i++) {
+            internalField.Append(new UnsignedField<1>(this, generalData.sliderConfig[i]));
+          }
+        }
+        else if (version >= 217) {
+          internalField.Append(new UnsignedField<6>(this, generalData.hw_uartMode));
+          if (IS_TARANIS_X9E(board)) {
+            internalField.Append(new UnsignedField<1>(this, generalData.sliderConfig[2]));
+            internalField.Append(new UnsignedField<1>(this, generalData.sliderConfig[3]));
+          }
+          else {
+            internalField.Append(new SpareBitsField<2>(this));
+          }
+        }
+        else {
+          internalField.Append(new UnsignedField<8>(this, generalData.hw_uartMode));
+        }
+        if (IS_HORUS(board)) {
+          for (int i=0; i<16; i++) {
+            if (i < MAX_SWITCHES(board, version))
+              internalField.Append(new UnsignedField<2>(this, generalData.switchConfig[i]));
+            else
+              internalField.Append(new SpareBitsField<2>(this));
+          }
+        }
+        for (int i=0; i<4; i++) {
+          if (i < MAX_POTS(board, version))
+            internalField.Append(new UnsignedField<2>(this, generalData.potConfig[i]));
           else
             internalField.Append(new SpareBitsField<2>(this));
         }
-      }
-      for (int i=0; i<4; i++) {
-        if (i < MAX_POTS(board, version))
-          internalField.Append(new UnsignedField<2>(this, generalData.potConfig[i]));
-        else
-          internalField.Append(new SpareBitsField<2>(this));
-      }
-      if (!IS_HORUS(board)) {
-        internalField.Append(new UnsignedField<8>(this, generalData.backlightColor));
+        if (!IS_HORUS(board)) {
+          internalField.Append(new UnsignedField<8>(this, generalData.backlightColor));
+        }
       }
     }
     else if (IS_SKY9X(board) && version >= 218) {
@@ -3785,8 +3856,15 @@ OpenTxGeneralData::OpenTxGeneralData(GeneralSettings & generalData, Board::Type 
 
     if (IS_TARANIS_X9E(board))
       internalField.Append(new SpareBitsField<64>(this)); // switchUnlockStates
-    else if (IS_TARANIS(board))
+    else if (IS_TARANIS(board) || board == BOARD_I6X) {
+      if (board == BOARD_I6X) {
+        // i6X EXTRA_GENERAL_FIELDS has auxSerialMode:4+slidersConfig:4 and potsConfig
+        // before switchUnlockStates. Taranis handles these in the IS_STM32 block above.
+        internalField.Append(new SpareBitsField<8>(this));  // auxSerialMode:4 + slidersConfig:4
+        internalField.Append(new SpareBitsField<8>(this));  // potsConfig
+      }
       internalField.Append(new SpareBitsField<16>(this)); // switchUnlockStates
+    }
 
     if (version == 217) {
       for (int i=0; i<MAX_CUSTOM_FUNCTIONS(board, version); i++) {
@@ -3828,6 +3906,30 @@ OpenTxGeneralData::OpenTxGeneralData(GeneralSettings & generalData, Board::Type 
       for (int i=0; i<MAX_SLIDERS(board); ++i) {
         internalField.Append(new ZCharField<3>(this, generalData.sliderName[i], "Slider name"));
       }
+    }
+    else if (board == BOARD_I6X) {
+      // i6X (OpenI6X firmware) EXTRA_GENERAL_FIELDS:
+      // 6 switches (SA-SF), each 2 bits of switchConfig → 12 bits + 4 spare = 16 bits (uint16_t swconfig_t)
+      for (int i=0; i<8; i++) {
+        if (i < MAX_SWITCHES(board, version))
+          internalField.Append(new UnsignedField<2>(this, generalData.switchConfig[i]));
+        else
+          internalField.Append(new SpareBitsField<2>(this));
+      }
+      // switchName: 6 switches × 3 chars
+      for (int i=0; i<MAX_SWITCHES(board, version); ++i) {
+        internalField.Append(new ZCharField<3>(this, generalData.switchName[i], "Switch name"));
+      }
+      // stickName: 4 × 3 chars
+      for (int i=0; i<CPN_MAX_STICKS; ++i) {
+        internalField.Append(new ZCharField<3>(this, generalData.stickName[i], "Stick name"));
+      }
+      // potName: 2 × 3 chars (POT1, POT2)
+      for (int i=0; i<MAX_POTS(board, version); ++i) {
+        internalField.Append(new ZCharField<3>(this, generalData.potName[i], "Pot name"));
+      }
+      // receiverId[16][4] = 64 bytes — no Companion data model, consume as spare
+      internalField.Append(new SpareBitsField<512>(this)); // receiverId[16][4]
     }
 
     if (IS_HORUS(board)) {

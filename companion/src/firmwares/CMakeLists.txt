@@ -23,6 +23,7 @@ set(firmwares_SRCS
   ersky9x/ersky9xinterface.cpp
   opentx/opentxeeprom.cpp
   opentx/opentxinterface.cpp
+  openi6x/openi6xinterface.cpp
   )
 
 string(REPLACE ".cpp" ".h" firmwares_HDRS "${firmwares_SRCS}")
@@ -43,4 +44,5 @@ target_include_directories(firmwares
     "${CMAKE_CURRENT_LIST_DIR}/er9x"
     "${CMAKE_CURRENT_LIST_DIR}/ersky9x"
     "${CMAKE_CURRENT_LIST_DIR}/opentx"
+    "${CMAKE_CURRENT_LIST_DIR}/openi6x"
   )

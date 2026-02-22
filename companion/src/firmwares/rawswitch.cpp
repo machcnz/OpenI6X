@@ -72,7 +72,7 @@ QString RawSwitch::toString(Board::Type board, const GeneralSettings * const gen
     div_t qr;
     switch(type) {
       case SWITCH_TYPE_SWITCH:
-        if (IS_HORUS_OR_TARANIS(board)) {
+        if (IS_HORUS_OR_TARANIS(board) || board == Board::BOARD_I6X) {
           qr = div(index-1, 3);
           if (generalSettings)
             swName = QString(generalSettings->switchName[qr.quot]);
