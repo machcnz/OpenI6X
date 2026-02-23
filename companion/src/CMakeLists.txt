@@ -106,6 +106,7 @@ include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}
   ${CMAKE_SOURCE_DIR}
   ${COMPANION_SRC_DIRECTORY}
+  ${COMPANION_SRC_DIRECTORY}/firmwares
   ${COMPANION_SRC_DIRECTORY}/shared
   ${SIMU_SRC_DIRECTORY}
   ${COMPANION_SRC_DIRECTORY}/thirdparty/qcustomplot
@@ -331,6 +332,7 @@ qt5_wrap_ui(companion_SRCS ${companion_UIS})
 qt5_wrap_cpp(companion_SRCS ${companion_MOC_HDRS})
 
 add_executable(${COMPANION_NAME} MACOSX_BUNDLE ${WIN_EXECUTABLE_TYPE} ${companion_SRCS} ${icon_RC})
+
 target_link_libraries(${COMPANION_NAME} PRIVATE
   generaledit
   modeledit
@@ -338,8 +340,145 @@ target_link_libraries(${COMPANION_NAME} PRIVATE
   shared
   ${CPN_COMMON_LIB}
   Qt5::PrintSupport
+  Qt5::Multimedia
+  Qt5::Network
 )
 
+# MinGW: static link C++ runtime to avoid DLL dependencies
+if(MINGW)
+  target_link_options(${COMPANION_NAME} PRIVATE
+    -static-libgcc
+    -static-libstdc++
+  )
+endif()
+
+# Windows/MSYS2: Copy required DLLs next to executable
+if(WIN32 AND MINGW)
+  # MSYS2 MinGW64 paths - use MINGW_PREFIX if available, fallback to standard path
+  if(DEFINED ENV{MINGW_PREFIX})
+    set(MSYS2_MINGW_BIN "$ENV{MINGW_PREFIX}/bin")
+  else()
+    set(MSYS2_MINGW_BIN "/mingw64/bin")
+  endif()
+  
+  # MinGW runtime DLLs
+  set(MINGW_DLLS
+    libwinpthread-1.dll
+    libgcc_s_seh-1.dll
+    libstdc++-6.dll
+  )
+  
+  # Qt5 DLLs
+  set(QT_DLLS
+    Qt5Core.dll
+    Qt5Gui.dll
+    Qt5Widgets.dll
+    Qt5Xml.dll
+    Qt5Network.dll
+    Qt5Multimedia.dll
+    Qt5PrintSupport.dll
+    Qt5Svg.dll
+  )
+  
+  # Additional dependencies Qt needs (excluding ICU - handled separately with glob)
+  set(EXTRA_DLLS
+    libpng16-16.dll
+    zlib1.dll
+    libharfbuzz-0.dll
+    libfreetype-6.dll
+    libbz2-1.dll
+    libglib-2.0-0.dll
+    libintl-8.dll
+    libiconv-2.dll
+    libpcre2-16-0.dll
+    libpcre2-8-0.dll
+    libdouble-conversion.dll
+    libzstd.dll
+    libbrotlidec.dll
+    libbrotlicommon.dll
+    libmd4c.dll
+    libgraphite2.dll
+  )
+  
+  # Copy all DLLs (no EXISTS check - let it fail visibly if missing)
+  foreach(_dll ${MINGW_DLLS} ${QT_DLLS} ${EXTRA_DLLS})
+    add_custom_command(TARGET ${COMPANION_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+              "${MSYS2_MINGW_BIN}/${_dll}"
+              "$<TARGET_FILE_DIR:${COMPANION_NAME}>/${_dll}"
+    )
+  endforeach()
+  
+  # ICU libraries - use glob to handle version differences
+  file(GLOB ICU_DLLS "${MSYS2_MINGW_BIN}/libicudt*.dll" "${MSYS2_MINGW_BIN}/libicuin*.dll" "${MSYS2_MINGW_BIN}/libicuuc*.dll")
+  foreach(_icu ${ICU_DLLS})
+    get_filename_component(_icu_name "${_icu}" NAME)
+    add_custom_command(TARGET ${COMPANION_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+              "${_icu}"
+              "$<TARGET_FILE_DIR:${COMPANION_NAME}>/${_icu_name}"
+    )
+  endforeach()
+  
+  # Qt plugins directory
+  if(DEFINED ENV{MINGW_PREFIX})
+    set(MSYS2_QT_PLUGINS "$ENV{MINGW_PREFIX}/share/qt5/plugins")
+  else()
+    set(MSYS2_QT_PLUGINS "/mingw64/share/qt5/plugins")
+  endif()
+  
+  # platforms plugin (required)
+  add_custom_command(TARGET ${COMPANION_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${COMPANION_NAME}>/platforms"
+  )
+  if(EXISTS "${MSYS2_QT_PLUGINS}/platforms/qwindows.dll")
+    add_custom_command(TARGET ${COMPANION_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+              "${MSYS2_QT_PLUGINS}/platforms/qwindows.dll"
+              "$<TARGET_FILE_DIR:${COMPANION_NAME}>/platforms/qwindows.dll"
+    )
+  endif()
+  
+  # imageformats plugins
+  add_custom_command(TARGET ${COMPANION_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${COMPANION_NAME}>/imageformats"
+  )
+  file(GLOB _imgfmt_dlls "${MSYS2_QT_PLUGINS}/imageformats/*.dll")
+  foreach(_idll ${_imgfmt_dlls})
+    get_filename_component(_idll_name "${_idll}" NAME)
+    add_custom_command(TARGET ${COMPANION_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+              "${_idll}"
+              "$<TARGET_FILE_DIR:${COMPANION_NAME}>/imageformats/${_idll_name}"
+    )
+  endforeach()
+  
+  # mediaservice plugins (for Qt5Multimedia)
+  add_custom_command(TARGET ${COMPANION_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${COMPANION_NAME}>/mediaservice"
+  )
+  file(GLOB _media_dlls "${MSYS2_QT_PLUGINS}/mediaservice/*.dll")
+  foreach(_mdll ${_media_dlls})
+    get_filename_component(_mdll_name "${_mdll}" NAME)
+    add_custom_command(TARGET ${COMPANION_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+              "${_mdll}"
+              "$<TARGET_FILE_DIR:${COMPANION_NAME}>/mediaservice/${_mdll_name}"
+    )
+  endforeach()
+  
+  # styles plugins
+  add_custom_command(TARGET ${COMPANION_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${COMPANION_NAME}>/styles"
+  )
+  if(EXISTS "${MSYS2_QT_PLUGINS}/styles/qwindowsvistastyle.dll")
+    add_custom_command(TARGET ${COMPANION_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+              "${MSYS2_QT_PLUGINS}/styles/qwindowsvistastyle.dll"
+              "$<TARGET_FILE_DIR:${COMPANION_NAME}>/styles/qwindowsvistastyle.dll"
+    )
+  endif()
+endif()
 
 PrintTargetReport("${COMPANION_NAME}")
 
@@ -350,6 +489,16 @@ set(simu_SRCS simulator.cpp )
 add_executable(${SIMULATOR_NAME} MACOSX_BUNDLE ${WIN_EXECUTABLE_TYPE} ${simu_SRCS} ${icon_RC})
 target_link_libraries(${SIMULATOR_NAME} PRIVATE ${CPN_COMMON_LIB})
 
+# MinGW: static link C++ runtime
+if(MINGW)
+  target_link_options(${SIMULATOR_NAME} PRIVATE
+    -static-libgcc
+    -static-libstdc++
+  )
+endif()
+
+# Note: Qt DLLs are shared with companion in same output directory, no need to copy again
+
 ############# Install ####################
 
 # Generate list of simulator plugins, used by all platforms
@@ -357,12 +506,11 @@ file(GLOB simulator_plugins "${CMAKE_BINARY_DIR}/*opentx-*simulator${CMAKE_SHARE
 # the current flavour is not automatically added if build in the current cmake iteration, so always
 # add its library name to be sure
 string(TOLOWER ${PCB} FLAVOUR)
-if(POLICY CMP0026)
-  cmake_policy(SET CMP0026 OLD)  # https://cmake.org/cmake/help/v3.0/policy/CMP0026.html
-endif()
+# Do not read LOCATION (forbidden on modern CMake).
+
+# If the current flavour simulator plugin is built in this run, append its built file path.
 if(SIMU_TARGET)
-  get_property(current_plugin TARGET opentx-${FLAVOUR}-simulator PROPERTY LOCATION)
-  list(APPEND simulator_plugins "${current_plugin}")
+  list(APPEND simulator_plugins $<TARGET_FILE:opentx-${FLAVOUR}-simulator>)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
@@ -404,7 +552,18 @@ elseif(WIN32)
     # companion & simulator binaries
     install(TARGETS ${COMPANION_NAME} DESTINATION ${INSTALL_DESTINATION})
     install(TARGETS ${SIMULATOR_NAME} DESTINATION ${INSTALL_DESTINATION})
-    install(FILES ${simulator_plugins} DESTINATION "${INSTALL_DESTINATION}")
+    #install(FILES ${simulator_plugins} DESTINATION "${INSTALL_DESTINATION}")
+    # Install current flavour plugin via TARGETS (safe, no genex)
+    if(SIMU_TARGET)
+    install(TARGETS opentx-${FLAVOUR}-simulator
+     RUNTIME DESTINATION "${INSTALL_DESTINATION}"
+     LIBRARY DESTINATION "${INSTALL_DESTINATION}"
+     ARCHIVE DESTINATION "${INSTALL_DESTINATION}"
+     )
+     endif()
+
+# Install any other already-built simulator plugin DLLs found by the glob
+install(FILES ${simulator_plugins} DESTINATION "${INSTALL_DESTINATION}")
     # supporting utilities
     set(INSTALL_TEMP_FILES avrdude.exe avrdude.conf dfu-util.exe libusb0.dll libusb-1.0.dll license.txt)
     foreach(tmpfile ${INSTALL_TEMP_FILES})

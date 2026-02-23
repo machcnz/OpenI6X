@@ -1003,6 +1003,12 @@ void MainWindow::logFile()
 void MainWindow::about()
 {
   QString aboutStr = "<center><img src=\":/images/companion-title.png\"></center><br/>";
+  aboutStr.append(tr("OpenI6X Companion: <a href='%1'>%1</a>").arg("https://github.com/OpenI6X/opentx"));
+  aboutStr.append("<br/><br/>");
+  aboutStr.append(tr("OpenI6X / OpenTX Companion Port 2026 by Marc Archbold"));
+  aboutStr.append("<br/>");
+  aboutStr.append(tr("<a href='%1'>%1</a>").arg("https://github.com/machcnz/OpenI6X"));
+  aboutStr.append("<br/><br/>");
   aboutStr.append(tr("OpenTX Home Page: <a href='%1'>%1</a>").arg("http://www.open-tx.org"));
   aboutStr.append("<br/><br/>");
   aboutStr.append(tr("The OpenTX Companion project was originally forked from <a href='%1'>eePe</a>").arg("http://code.google.com/p/eepe"));
@@ -1012,9 +1018,10 @@ void MainWindow::about()
   aboutStr.append(QString("Version %1, %2").arg(VERSION).arg(__DATE__));
   aboutStr.append("<br/><br/>");
   aboutStr.append(tr("Copyright OpenTX Team") + "<br/>&copy; 2011-2017<br/>");
+  aboutStr.append(tr("Copyright OpenI6X Contributors") + "<br/>&copy; 2026<br/>");
   QMessageBox msgBox(this);
   msgBox.setWindowIcon(CompanionIcon("information.png"));
-  msgBox.setWindowTitle(tr("About Companion"));
+  msgBox.setWindowTitle(tr("About OpenI6X Companion"));
   msgBox.setText(aboutStr);
   msgBox.exec();
 }
