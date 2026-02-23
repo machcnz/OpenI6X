@@ -15,6 +15,8 @@ cmake .. -DPCB=I6X -DHELI=NO -DGVARS=YES -DPCBI6X_INAV=NO -DPCBI6X_ELRS=YES -DDF
 
 make -j$(nproc)
 
+**Or download from release**
+
 
 [![Release](https://img.shields.io/github/v/release/OpenI6X/opentx?include_prereleases)](https://github.com/OpenI6X/opentx/releases/latest)
 [![GitHub all releases](https://img.shields.io/github/downloads/OpenI6X/opentx/total)](https://github.com/OpenI6X/opentx/releases)
