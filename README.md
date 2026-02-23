@@ -1,11 +1,11 @@
-## Fork note: Openi6x - Companion app - Flysky i6X support
+## Fork note: Companion app - Flysky i6X support
 
 Default branch `companion-i6x-support` adds Flysky i6X support to the Companion app.
 
 Status
 - Tested on real Flysky i6X hardware
 - EEPROM read/write verified
-- Model load/save verified
+- Model load/save, general settings, calibration verified
 
 ### Build (Companion)
 
