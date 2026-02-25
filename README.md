@@ -1,8 +1,24 @@
 ## Fork note: Companion app - Flysky i6X support
+**OpenI6X Companion** is a desktop application (Windows/Linux/Mac) that lets you configure your i6X from your PC rather than navigating the radio's small screen and buttons.
 
-Default branch `companion-i6x-support` adds Flysky i6X support to the Companion app.
+| Read/Write Models | Model Setup |
+|---|---|
+| <img src="https://raw.githubusercontent.com/machcnz/OpenI6X/companion-i6x-support/companion/2-Read_and_Write_Models-direct-to-i6x.png" width="420" alt="Read and Write Models"> | <img src="https://raw.githubusercontent.com/machcnz/OpenI6X/companion-i6x-support/companion/3-Model_setup.png" width="420" alt="Model Setup"> |
 
-Status
+| Curves | Radio Settings |
+|---|---|
+| <img src="https://raw.githubusercontent.com/machcnz/OpenI6X/companion-i6x-support/companion/4-Model_Setup_Curves.png" width="420" alt="Curves"> | <img src="https://raw.githubusercontent.com/machcnz/OpenI6X/companion-i6x-support/companion/5-Setup_Radio_Settings.png" width="420" alt="Radio Settings"> |
+
+**Some of the features:**
+Connect via USB and read/write your entire radio configuration: models, mixes, general settings, all directly from your PC keyboard and mouse
+Visual mixer editor, making complex mixes significantly easier to set up than doing it on the radio
+Back up and restore your models and Radio settings including calibration to your PC
+Copy models between radios
+The companion app is separate from the firmware, firmware runs on the radio, companion runs on your PC and talks to it over USB
+
+**Default branch** `companion-i6x-support` adds Flysky i6X support to the Companion app.
+
+**Status**
 - Tested on real Flysky i6X hardware
 - EEPROM read/write verified
 - Model load/save, general settings, calibration verified
