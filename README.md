@@ -1,13 +1,12 @@
 ## Fork note: Companion app - Flysky i6X support
 **OpenI6X Companion** is a desktop application (Windows/Linux/Mac) that lets you configure your i6X from your PC rather than navigating the radio's small screen and buttons.
 
-| Read/Write Models | Model Setup |
-|---|---|
-| <img src="https://raw.githubusercontent.com/machcnz/OpenI6X/companion-i6x-support/companion/2-Read_and_Write_Models-direct-to-i6x.png" width="420" alt="Read and Write Models"> | <img src="https://raw.githubusercontent.com/machcnz/OpenI6X/companion-i6x-support/companion/3-Model_setup.png" width="420" alt="Model Setup"> |
-
-| Curves | Radio Settings |
-|---|---|
-| <img src="https://raw.githubusercontent.com/machcnz/OpenI6X/companion-i6x-support/companion/4-Model_Setup_Curves.png" width="420" alt="Curves"> | <img src="https://raw.githubusercontent.com/machcnz/OpenI6X/companion-i6x-support/companion/5-Setup_Radio_Settings.png" width="420" alt="Radio Settings"> |
+<p align="center">
+  <img src="https://raw.githubusercontent.com/machcnz/OpenI6X/companion-i6x-support/companion/2-Read_and_Write_Models-direct-to-i6x.png" width="420" alt="Read/Write Models">
+  <img src="https://raw.githubusercontent.com/machcnz/OpenI6X/companion-i6x-support/companion/3-Model_setup.png" width="420" alt="Model Setup">
+  <img src="https://raw.githubusercontent.com/machcnz/OpenI6X/companion-i6x-support/companion/4-Model_Setup_Curves.png" width="420" alt="Curves">
+  <img src="https://raw.githubusercontent.com/machcnz/OpenI6X/companion-i6x-support/companion/5-Setup_Radio_Settings.png" width="420" alt="Radio Settings">
+</p> 
 
 **Some of the features:**
 Connect via USB and read/write your entire radio configuration: models, mixes, general settings, all directly from your PC keyboard and mouse
@@ -24,15 +23,14 @@ The companion app is separate from the firmware, firmware runs on the radio, com
 - Model load/save, general settings, calibration verified
 
 ### Build (Companion)
-
+```bash
 mkdir build && cd build
 
 cmake .. -DPCB=I6X -DHELI=NO -DGVARS=YES -DPCBI6X_INAV=NO -DPCBI6X_ELRS=YES -DDFPLAYER=YES -DUSB_MSD=YES -DUSB_SERIAL=YES -DSBUS_TRAINER=YES -DTRANSLATIONS=EN -DDEBUG=NO -DCMAKE_BUILD_TYPE=Release
 
 make -j$(nproc)
-
+```
 **Or download from release**
-
 
 [![Release](https://img.shields.io/github/v/release/OpenI6X/opentx?include_prereleases)](https://github.com/OpenI6X/opentx/releases/latest)
 [![GitHub all releases](https://img.shields.io/github/downloads/OpenI6X/opentx/total)](https://github.com/OpenI6X/opentx/releases)
