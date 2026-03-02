@@ -32,6 +32,17 @@ make -j$(nproc)
 ```
 **Or download from release**
 
+NOTE: **First Use**
+It has been reported Companion segfaults/closes on first use. This occurs when 'default' profile doesnt exist.
+Simply create a DEFAULT profile then a profile for your Radio as follows: 
+
+1. Launch Companion and create a profile - name the profile "Default"
+2. Close Companion
+3. Launch Companion and create a **New profile**, name it "FlySky i6x" or whatever name you like
+4. Set the Radio to i6x. Save the profile (This saves to the WIndows Registry, assume .config in linux)
+5. In Companion, click [Read Models and Settings From Radio]
+6. You should then see the model Window with the Radio's EEPROM read.
+
 [![Release](https://img.shields.io/github/v/release/OpenI6X/opentx?include_prereleases)](https://github.com/OpenI6X/opentx/releases/latest)
 [![GitHub all releases](https://img.shields.io/github/downloads/OpenI6X/opentx/total)](https://github.com/OpenI6X/opentx/releases)
 [![GitHub license](https://img.shields.io/github/license/OpenI6X/opentx)](https://github.com/openi6x/opentx/blob/master/LICENSE)
