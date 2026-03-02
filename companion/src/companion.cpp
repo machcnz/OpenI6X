@@ -205,6 +205,7 @@ int main(int argc, char *argv[])
     checkSettingsImport(false);
 
   g.init();
+  g.sessionIdReset();  // 020326 - sync m_sessionId to loaded id(); without this it stays -1 and g.profile[-1] crashes
 
   QFile dbgLog;
   if (AppDebugMessageHandler::instance() && g.appDebugLog() && !g.appLogsDir().isEmpty() && QDir().mkpath(g.appLogsDir())) {
