@@ -366,7 +366,8 @@ if(WIN32 AND MINGW)
     libwinpthread-1.dll
     libgcc_s_seh-1.dll
     libstdc++-6.dll
-  )
+    SDL.dll
+    )
   
   # Qt5 DLLs
   set(QT_DLLS

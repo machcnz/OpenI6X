@@ -41,6 +41,7 @@ static void addOpenTxFlyskyOptions(OpenTxFirmware * firmware)
   static const Firmware::Option opt_eu("eu", Firmware::tr("Removes D8 FrSky protocol support which is not legal for use in the EU on radios sold after Jan 1st, 2015"));
   static const Firmware::Option opt_fl("flexr9m", Firmware::tr("Enable non certified firmwares"));
   firmware->addOption("multimodule", Firmware::tr("Support for the DIY-Multiprotocol-TX-Module"));
+  firmware->addOption("crossfire", Firmware::tr("Support for Crossfire and ExpressLRS (ELRS) external modules")); // 09.03 - MA FS-i6x modules
   firmware->addOptionsGroup({opt_eu, opt_fl});
 
   // Font option

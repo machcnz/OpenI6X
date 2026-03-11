@@ -41,6 +41,7 @@ QString ModuleData::rfProtocolToString() const
   }
 }
 
+// 100326 - Fix FS-i6x module
 QString ModuleData::subTypeToString(int type) const
 {
   static const char * strings[] = {
@@ -48,6 +49,13 @@ QString ModuleData::subTypeToString(int type) const
     "EU",
     "868MHz",
     "915MHz"
+  };
+
+  static const char * afhds2aStrings[] = {
+    "PWM,IBUS",
+    "PPM,IBUS",
+    "PWM,SBUS",
+    "PPM,SBUS"
   };
 
   if (type < 0)
@@ -59,6 +67,9 @@ QString ModuleData::subTypeToString(int type) const
 
     case PULSES_PXX_R9M:
       return CHECK_IN_ARRAY(strings, type);
+
+    case PULSES_AFHDS2A:
+      return CHECK_IN_ARRAY(afhds2aStrings, type);
 
     default:
       return CPN_STR_UNKNOWN_ITEM;
@@ -104,7 +115,8 @@ QString ModuleData::protocolToString(unsigned protocol)
     "Crossfire",
     "DIY Multiprotocol Module",
     "FrSky R9M Module",
-    "SBUS output at VBat"
+    "SBUS output at VBat",
+    "FlySky AFHDS2A"
   };
 
   return CHECK_IN_ARRAY(strings, protocol);

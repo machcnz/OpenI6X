@@ -199,7 +199,7 @@ ModulePanel::ModulePanel(QWidget * parent, ModelData & model, ModuleData & modul
       ui->trainerMode->setItemData(TRAINER_MODE_MASTER_BATTERY_COMPARTMENT, 0, Qt::UserRole - 1);
     }
     ui->trainerMode->setCurrentIndex(model.trainerMode);
-    if (!IS_HORUS_OR_TARANIS(firmware->getBoard())) {
+    if (!IS_HORUS_OR_TARANIS(firmware->getBoard()) && !firmware->getCapability(ModelTrainerEnable)) {
       ui->label_trainerMode->hide();
       ui->trainerMode->hide();
     }
@@ -250,10 +250,12 @@ ModulePanel::~ModulePanel()
   delete ui;
 }
 
-bool ModulePanel::moduleHasFailsafes()
+bool ModulePanel::moduleHasFailsafes() // 100326 - Fix FS-i6x plus bugs ;;
 {
-  return (((PulsesProtocol)module.protocol == PulsesProtocol::PULSES_PXX_XJT_X16 || (PulsesProtocol)module.protocol == PulsesProtocol::PULSES_PXX_R9M)
-         && firmware->getCapability(HasFailsafe));;
+  return (((PulsesProtocol)module.protocol == PulsesProtocol::PULSES_PXX_XJT_X16 ||
+           (PulsesProtocol)module.protocol == PulsesProtocol::PULSES_PXX_R9M     ||
+           (PulsesProtocol)module.protocol == PulsesProtocol::PULSES_AFHDS2A)
+         && firmware->getCapability(HasFailsafe));
 }
 
 void ModulePanel::setupFailsafes()
@@ -382,6 +384,11 @@ void ModulePanel::update()
         mask |= MASK_CHANNELS_RANGE;
         module.channelsCount = 16;
         break;
+      case PULSES_AFHDS2A: // 100326 - fix FS-i6x module
+        mask |= MASK_CHANNELS_RANGE | MASK_RX_NUMBER | MASK_SUBTYPES | MASK_FAILSAFES;
+        module.channelsCount = 14;
+        max_rx_num = 63;
+        break;        
       case PULSES_PPM:
         mask |= MASK_PPM_FIELDS | MASK_SBUSPPM_FIELDS| MASK_CHANNELS_RANGE| MASK_CHANNELS_COUNT;
         if (IS_9XRPRO(board)) {

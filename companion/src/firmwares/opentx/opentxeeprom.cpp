@@ -2880,11 +2880,22 @@ class FrskyField: public StructField {
         Append(new SignedField<8>(this, frsky.varioCenterMin));
         Append(new SignedField<8>(this, frsky.varioMin));
         Append(new SignedField<8>(this, frsky.varioMax));
-        Append(new BoolField<1>(this, rssiAlarms.disabled));
-        Append(new SpareBitsField<1>(this));
-        Append(new ConversionField<SignedField<6> >(this, rssiAlarms.warning, -45));
-        Append(new SpareBitsField<2>(this));
-        Append(new ConversionField<SignedField<6> >(this, rssiAlarms.critical, -42));
+        // 100326 - FS-i6X stores plain int8_t values directly, i.e. no bitfields or offsets
+        if (IS_I6X(board)) {
+          // RFAlarmData: int8_t warning; int8_t critical; 'as-is' values stored range 0-100
+          // No 'disabled' field exists in i6X RFAlarmData, so both paths write 2 bytes total
+          // MA note - FS-i6x does not use separate alarm structs for AFHDS2A and CRSF.
+          Append(new SignedField<8>(this, rssiAlarms.warning));
+          Append(new SignedField<8>(this, rssiAlarms.critical));
+        }
+        else {
+          // Taranis/other: bitfield struct with -45/-42 offsets
+          Append(new BoolField<1>(this, rssiAlarms.disabled));
+          Append(new SpareBitsField<1>(this));
+          Append(new ConversionField<SignedField<6> >(this, rssiAlarms.warning, -45));
+          Append(new SpareBitsField<2>(this));
+          Append(new ConversionField<SignedField<6> >(this, rssiAlarms.critical, -42));
+        }
 
         if (version == 216) {
           Append(new BoolField<1>(this, frsky.mAhPersistent));
@@ -2975,22 +2986,42 @@ class SensorField: public TransformedField {
       TransformedField(parent, internalField),
       internalField(this, "Sensor"),
       sensor(sensor),
+      board(board), // MA - needed for i6x
       version(version),
       _param(0)
     {
-      internalField.Append(new UnsignedField<16>(this, _id, "id/persistentValue"));
-      internalField.Append(new UnsignedField<8>(this, _instance, "instance/formula"));
-      internalField.Append(new ZCharField<4>(this, sensor.label));
-      internalField.Append(new UnsignedField<1>(this, sensor.type, "type"));
-      internalField.Append(new UnsignedField<5>(this, sensor.unit, "unit"));
-      internalField.Append(new UnsignedField<2>(this, sensor.prec, "prec"));
-      internalField.Append(new BoolField<1>(this, sensor.autoOffset));
-      internalField.Append(new BoolField<1>(this, sensor.filter));
-      internalField.Append(new BoolField<1>(this, sensor.logs));
-      internalField.Append(new BoolField<1>(this, sensor.persistent));
-      internalField.Append(new BoolField<1>(this, sensor.onlyPositive));
-      internalField.Append(new UnsignedField<3>(this, _subid, "subid"));
-      internalField.Append(new UnsignedField<32>(this, _param, "param"));
+      if (IS_I6X(board)) {
+        // MA - needed for i6X TelemetrySensor = 14 bytes: subId is a full uint8 after label[4]
+        internalField.Append(new UnsignedField<16>(this, _id, "id/persistentValue"));
+        internalField.Append(new UnsignedField<8>(this, _instance, "instance/formula"));
+        internalField.Append(new ZCharField<4>(this, sensor.label));
+        internalField.Append(new UnsignedField<8>(this, _subid, "subId")); // full byte
+        internalField.Append(new UnsignedField<1>(this, sensor.type, "type"));
+        internalField.Append(new SpareBitsField<1>(this));                  // spare1
+        internalField.Append(new UnsignedField<6>(this, sensor.unit, "unit")); // 6 bits
+        internalField.Append(new UnsignedField<2>(this, sensor.prec, "prec"));
+        internalField.Append(new BoolField<1>(this, sensor.autoOffset));
+        internalField.Append(new BoolField<1>(this, sensor.filter));
+        internalField.Append(new BoolField<1>(this, sensor.logs));
+        internalField.Append(new BoolField<1>(this, sensor.persistent));
+        internalField.Append(new BoolField<1>(this, sensor.onlyPositive));
+        internalField.Append(new SpareBitsField<1>(this));                  // spare2
+        internalField.Append(new UnsignedField<32>(this, _param, "param"));
+      } else { // All non-i6X boards: existing 13-byte layout unchanged
+        internalField.Append(new UnsignedField<16>(this, _id, "id/persistentValue"));
+        internalField.Append(new UnsignedField<8>(this, _instance, "instance/formula"));
+        internalField.Append(new ZCharField<4>(this, sensor.label));
+        internalField.Append(new UnsignedField<1>(this, sensor.type, "type"));
+        internalField.Append(new UnsignedField<5>(this, sensor.unit, "unit"));
+        internalField.Append(new UnsignedField<2>(this, sensor.prec, "prec"));
+        internalField.Append(new BoolField<1>(this, sensor.autoOffset));
+        internalField.Append(new BoolField<1>(this, sensor.filter));
+        internalField.Append(new BoolField<1>(this, sensor.logs));
+        internalField.Append(new BoolField<1>(this, sensor.persistent));
+        internalField.Append(new BoolField<1>(this, sensor.onlyPositive));
+        internalField.Append(new UnsignedField<3>(this, _subid, "subid"));
+        internalField.Append(new UnsignedField<32>(this, _param, "param"));
+      }
     }
 
     virtual void beforeExport()
@@ -3052,6 +3083,7 @@ class SensorField: public TransformedField {
   protected:
     StructField internalField;
     SensorData & sensor;
+    Board::Type board;     // MA needed for i6x
     unsigned int version;
     unsigned int _id;
     unsigned int _subid;
@@ -3320,12 +3352,13 @@ OpenTxModelData::OpenTxModelData(ModelData & modelData, Board::Type board, unsig
 
   if (IS_ARM(board) && version >= 215) {
     for (int module=0; module<modulesCount; module++) {
-      if (IS_I6X(board)) {
-        // i6X firmware ModuleData has an extra uint8_t type field (full byte) before rfProtocol.
-        // Original OpenTX used a bitfield here. Skip it as spare.
-        internalField.Append(new SpareBitsField<8>(this)); // ModuleData.type (i6X specific)
+      if (IS_I6X(board)) { 
+        internalField.Append(new UnsignedField<8>(this, i6xModuleType[module], "ModuleType")); // 09.03.26 - MA
       }
-      if (version >= 217) {
+      if (IS_I6X(board)) {
+        // i6X rfProtocol is uint8_t: RF_I6X_PROTO_OFF=0, RF_I6X_PROTO_AFHDS2A=1
+        internalField.Append(new UnsignedField<8>(this, i6xRfProtocol[module], "rfProtocol"));
+      } else if (version >= 217) {
         internalField.Append(new ConversionField<SignedField<4> >(this, modelData.moduleData[module].protocol, &protocolsConversionTable, "Protocol", DataField::tr("OpenTX doesn't accept this radio protocol")));
         internalField.Append(new SignedField<4>(this, subprotocols[module]));
       }
@@ -3349,10 +3382,18 @@ OpenTxModelData::OpenTxModelData(ModelData & modelData, Board::Type board, unsig
         }
       }
       if (version >= 217) {
-        internalField.Append(new ConversionField< SignedField<6> >(this, modelData.moduleData[module].ppm.delay, exportPpmDelay, importPpmDelay));
-        internalField.Append(new BoolField<1>(this, modelData.moduleData[module].ppm.pulsePol));
-        internalField.Append(new BoolField<1>(this, modelData.moduleData[module].ppm.outputType));
-        internalField.Append(new SignedField<8>(this, modelData.moduleData[module].ppm.frameLength));
+        if (IS_I6X(board) && modelData.moduleData[module].protocol == PULSES_AFHDS2A) {
+          internalField.Append(new UnsignedField<16>(this, modelData.moduleData[module].afhds2a.servoFreq));
+        }
+        else if (IS_I6X(board) && modelData.moduleData[module].protocol == PULSES_CROSSFIRE) {
+          internalField.Append(new SpareBitsField<16>(this));
+        }
+        else {
+          internalField.Append(new ConversionField< SignedField<6> >(this, modelData.moduleData[module].ppm.delay, exportPpmDelay, importPpmDelay));
+          internalField.Append(new BoolField<1>(this, modelData.moduleData[module].ppm.pulsePol));
+          internalField.Append(new BoolField<1>(this, modelData.moduleData[module].ppm.outputType));
+          internalField.Append(new SignedField<8>(this, modelData.moduleData[module].ppm.frameLength));
+        }
       }
       else {
         internalField.Append(new ConversionField< SignedField<8> >(this, modelData.moduleData[module].ppm.delay, exportPpmDelay, importPpmDelay));
@@ -3364,13 +3405,12 @@ OpenTxModelData::OpenTxModelData(ModelData & modelData, Board::Type board, unsig
 
   if (IS_I6X(board) && version >= 215) {
     // i6X firmware moved failsafeChannels out of ModuleData into ModelData as a single array.
-    // Serialize it once here, after all modules, with the correct i6X count of 16.
+    // FS-i6X Serialize a corrected count of 16.
     for (int i=0; i<MAX_CHANNELS(board, version); i++) {
       internalField.Append(new SignedField<16>(this, modelData.moduleData[0].failsafeChannels[i]));
     }
-    // i6X firmware has TrainerModuleData (6 bytes) after failsafeChannels in ModelData.
-    // Companion doesn't model trainerData, so skip it with spare bits.
-    internalField.Append(new SpareBitsField<48>(this)); // TrainerModuleData = 6 bytes (confirmed by CHKSIZE)
+    // i6X firmware has TrainerModuleData (5 bytes) MA whoops - after failsafeChannels in ModelData
+    internalField.Append(new SpareBitsField<40>(this));
   }
 
   if (IS_TARANIS(board) && version < 218) {
@@ -3477,7 +3517,24 @@ OpenTxModelData::OpenTxModelData(ModelData & modelData, Board::Type board, unsig
 void OpenTxModelData::beforeExport()
 {
   // qDebug() << QString("before export model") << modelData.name;
-
+  if (IS_I6X(board)) { // Handle FS-i6x Built-in AFHDS2A, fix 'off'
+  for (int module = 0; module < 2; module++) {
+    int proto = modelData.moduleData[module].protocol;
+    if (proto == PULSES_AFHDS2A) {
+      i6xModuleType[module] = 3; // MODULE_TYPE_AFHDS2A_SPI
+      i6xRfProtocol[module] = 1;
+    } else if (proto == PULSES_CROSSFIRE) {
+      i6xModuleType[module] = 2; // MODULE_TYPE_CROSSFIRE
+      i6xRfProtocol[module] = 0;
+    } else if (proto == PULSES_PPM) {
+      i6xModuleType[module] = 1; // MODULE_TYPE_PPM
+      i6xRfProtocol[module] = 0;
+    } else {
+      i6xModuleType[module] = 0; // MODULE_TYPE_NONE
+      i6xRfProtocol[module] = 0;
+    }
+  }
+}
   for (int module=0; module<3; module++) {
     if ((modelData.moduleData[module].protocol >= PULSES_PXX_XJT_X16 && modelData.moduleData[module].protocol <= PULSES_PXX_XJT_LR12) ||
       modelData.moduleData[module].protocol == PULSES_PXX_R9M) {
@@ -3525,7 +3582,19 @@ void OpenTxModelData::beforeExport()
 void OpenTxModelData::afterImport()
 {
   qCDebug(eepromImport) << QString("OpenTxModelData::afterImport()") << modelData.name;
-
+  
+  if (IS_I6X(board)) {
+  for (int module = 0; module < 2; module++) {
+    if (i6xModuleType[module] == 3)      // MODULE_TYPE_AFHDS2A_SPI
+      modelData.moduleData[module].protocol = PULSES_AFHDS2A;
+    else if (i6xModuleType[module] == 2) // MODULE_TYPE_CROSSFIRE
+      modelData.moduleData[module].protocol = PULSES_CROSSFIRE;
+    else if (i6xModuleType[module] == 1) // MODULE_TYPE_PPM
+      modelData.moduleData[module].protocol = PULSES_PPM;
+    else
+      modelData.moduleData[module].protocol = PULSES_OFF;
+  }
+}
   if (IS_TARANIS(board) && version < 216) {
     for (unsigned int i=0; i<CPN_MAX_STICKS; i++) {
       for (int j=0; j<64; j++) {

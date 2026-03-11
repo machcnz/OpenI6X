@@ -48,6 +48,7 @@ enum PulsesProtocol {
   PULSES_MULTIMODULE,
   PULSES_PXX_R9M,
   PULSES_SBUS,
+  PULSES_AFHDS2A, // Don't you, forget about me.
   PULSES_PROTOCOL_LAST
 };
 
@@ -154,7 +155,9 @@ class ModuleData {
       bool external_antenna;       // false = internal antenna, true = external antenna
       bool sport_out;
     } pxx;
-
+    struct {                       // 100326 - FS-i6x Module fixes
+        unsigned int servoFreq;
+      } afhds2a;
 
     void clear() { memset(this, 0, sizeof(ModuleData)); }
     void convert(RadioDataConversionState & cstate);

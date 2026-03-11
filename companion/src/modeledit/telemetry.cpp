@@ -913,7 +913,8 @@ void TelemetryPanel::setup()
 
     lock = true;
 
-    if (IS_ARM(firmware->getBoard())) {
+     if (IS_ARM(firmware->getBoard()) &&
+        !firmware->getCapability(NoTelemetryProtocol)) { // 100326 - Fix fs-i6x, isnt Frsky, use int or ext proto.
       ui->telemetryProtocol->addItem(tr("FrSky S.PORT"), 0);
       ui->telemetryProtocol->addItem(tr("FrSky D"), 1);
       if (IS_9XRPRO(firmware->getBoard()) ||

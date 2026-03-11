@@ -438,7 +438,7 @@ int OpenTxFirmware::getCapability(::Capability capability)
       if (IS_HORUS(board))
         return 0;
       else if (board == BOARD_I6X)
-        return 20;   // i6X MAXFILES=22, MAX_MODELS=20
+        return 20;   // FS-i6x Max models = 20 
       else if (IS_ARM(board))
         return 60;
       else if (board == BOARD_M128)
@@ -470,7 +470,9 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case PPMFrameLength:
       return 40;
     case FlightModes:
-      if (IS_ARM(board))
+      if (board == BOARD_I6X) // FS-i6x Flightmodes
+        return 5;
+      else if (IS_ARM(board))
         return 9;
       else if (IS_2560(board))
         return 6;
@@ -484,7 +486,9 @@ int OpenTxFirmware::getCapability(::Capability capability)
       else
         return id.contains("heli") ? 1 : 0;
     case Gvars:
-      if (IS_HORUS_OR_TARANIS(board))
+      if (board == BOARD_I6X) 
+        return 9;
+      else if (IS_HORUS_OR_TARANIS(board))
         return id.contains("nogvars") ? 0 : 9;
       else if (id.contains("gvars"))
         return IS_ARM(board) ? 9 : 5;
@@ -503,7 +507,7 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case GvarsFlightModes:
       return ((IS_ARM(board) || IS_2560(board)) ? 1 : 0);
     case Mixes:
-      return (IS_ARM(board) ? 64 : 32);
+      return (board == BOARD_I6X ? 32 : (IS_ARM(board) ? 64 : 32));
     case OffsetWeight:
       return (IS_ARM(board) ? 500 : 245);
     case Timers:
@@ -529,12 +533,16 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case SafetyChannelCustomFunction:
       return id.contains("nooverridech") ? 0 : 1;
     case LogicalSwitches:
-      if (IS_ARM(board))
+      if (board == BOARD_I6X)
+        return 12; 
+      else if (IS_ARM(board))
         return 64;
       else
         return 12;
     case CustomAndSwitches:
-      if (IS_ARM(board))
+      if (board == BOARD_I6X)
+        return 12;
+      else if (IS_ARM(board))
         return getCapability(LogicalSwitches);
       else
         return 15/*4bits*/- 9/*sw positions*/;
@@ -548,7 +556,7 @@ int OpenTxFirmware::getCapability(::Capability capability)
       else
         return 0;
     case Outputs:
-      return (IS_ARM(board) ? 32 : 16);
+      return (board == BOARD_I6X ? 16 : (IS_ARM(board) ? 32 : 16));
     case NumCurvePoints:
       return (IS_ARM(board) ? 512 : 104);
     case VoicesAsNumbers:
@@ -562,19 +570,25 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case Haptic:
       return (IS_2560(board) || IS_SKY9X(board) || IS_TARANIS_PLUS(board) || IS_TARANIS_SMALL(board) || IS_TARANIS_X9E(board) || IS_HORUS(board) || id.contains("haptic"));
     case ModelTrainerEnable:
-      if (IS_HORUS_OR_TARANIS(board))
+      if (board == BOARD_I6X) 
+        return 1;
+      else if (IS_HORUS_OR_TARANIS(board))
         return 1;
       else
         return 0;
     case MaxVolume:
-      return (IS_ARM(board) ? 23 : 7);
+        return (board == BOARD_I6X ? 30 : (IS_ARM(board) ? 23 : 7));
     case MaxContrast:
-      if (IS_TARANIS_SMALL(board))
+      if (board == BOARD_I6X)
+        return 63;
+      else if (IS_TARANIS_SMALL(board))
         return 30;
       else
         return 45;
     case MinContrast:
-      if (IS_TARANIS_X9(board))
+      if (board == BOARD_I6X)
+        return 30;
+      else if (IS_TARANIS_X9(board))
         return 0;
       else
         return 10;
@@ -615,7 +629,7 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case TelemetryCustomScreensFieldsPerLine:
       return HAS_LARGE_LCD(board) ? 3 : 2;
     case NoTelemetryProtocol:
-      return IS_HORUS_OR_TARANIS(board) ? 1 : 0;
+      return (IS_HORUS_OR_TARANIS(board) || board == BOARD_I6X) ? 1 : 0;
     case TelemetryUnits:
       return 0;
     case TelemetryMaxMultiplier:
@@ -691,13 +705,11 @@ int OpenTxFirmware::getCapability(::Capability capability)
     case HasTopLcd:
       return IS_TARANIS_X9E(board) ? 1 : 0;
     case GlobalFunctions:
-      // OpenI6X (FlySky i6X) uses the same limit as other AVR-era builds for global functions.
-      // The forked radio source defines g_eeGeneral.customFn[MAX_SPECIAL_FUNCTIONS] (18).
       if (board == BOARD_I6X)
         return 18;
       return IS_ARM(board) ? 64 : 0;
     case VirtualInputs:
-      return IS_ARM(board) ? 32 : 0;
+      return (board == BOARD_I6X ? 16 : (IS_ARM(board) ? 32 : 0));
     case InputsLength:
       return HAS_LARGE_LCD(board) ? 4 : 3;
     case TrainerInputs:
@@ -849,6 +861,39 @@ int OpenTxFirmware::isAvailable(PulsesProtocol proto, int port)
         return 0;
     }
   }
+  else if (board == BOARD_I6X) {
+    switch (port) {
+      case 0:  // internal AFHDS2A SPI module
+        switch (proto) {
+          case PULSES_OFF:
+          case PULSES_AFHDS2A:
+            return 1;
+          default:
+            return 0;
+        }
+    case 1:  // external module bay, ELRS mod etc
+      switch (proto) {
+        case PULSES_OFF:
+        case PULSES_PPM:
+          return 1;
+        case PULSES_CROSSFIRE:
+          return 1;
+        case PULSES_MULTIMODULE:
+          return 1;
+        default:
+          return 0;
+      }
+    case -1:  // trainer port
+      switch (proto) {
+        case PULSES_PPM:
+          return 1;
+        default:
+          return 0;
+      }
+    default:
+      return 0;
+  }
+}
   else {
     switch (proto) {
       case PULSES_PPM:

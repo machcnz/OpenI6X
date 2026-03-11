@@ -147,6 +147,8 @@ class OpenTxModelData: public TransformedField {
     unsigned int variant;
     char name[256];
     int subprotocols[CPN_MAX_MODULES+1/*trainer*/];
+    unsigned int i6xModuleType[CPN_MAX_MODULES];
+    unsigned int i6xRfProtocol[CPN_MAX_MODULES];
     ProtocolsConversionTable protocolsConversionTable;
     ChannelsConversionTable channelsConversionTable;
     QStringList _errors;
