@@ -1,3 +1,8 @@
+# ARCHIVED - Use new version 2.3.16 - here https://github.com/machcnz/OpenTX-2.3-Companion-for-OpenI6x
+
+# ARCHIVED - Use new version 2.3.16 - here https://github.com/machcnz/OpenTX-2.3-Companion-for-OpenI6x
+
+
 ## Fork note: Companion app - Flysky i6X support
 **OpenI6X Companion** is a desktop application (Windows/Linux/Mac) that lets you configure your i6X from your PC rather than navigating the radio's small screen and buttons.
 
